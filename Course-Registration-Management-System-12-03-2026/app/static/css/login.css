@@ -1,0 +1,15 @@
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+.bg-background-light {
+    background-color: #f6f6f8;
+}
+
+.bg-primary {
+    background-color: #135bec;
+}
+
+.text-primary {
+    color: #135bec;
+}
