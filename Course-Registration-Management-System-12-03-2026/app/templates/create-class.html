@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Admin - Tạo Lớp Học Phần</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/create-class.css') }}">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+</head>
+
+<body>
+
+<header class="header">
+
+<div class="logo">
+<span>🎓</span>
+<h2>Admin Quản lý Đào tạo</h2>
+</div>
+
+<nav class="menu">
+<a href="#">Lớp học</a>
+<a href="#">Môn học</a>
+<a href="#">Học kỳ</a>
+</nav>
+
+<div class="user">👤</div>
+
+</header>
+
+<main class="container">
+
+<h1 class="title">Tạo Lớp Học Phần Mới</h1>
+
+<p class="description">
+Điền thông tin chi tiết để khởi tạo lớp học phần mới
+</p>
+
+<div class="grid">
+
+<!-- SIDEBAR -->
+
+<div>
+
+<div class="sidebar">
+
+<h3>Hướng dẫn nhập liệu</h3>
+
+<ul>
+<li>Chọn đúng môn học</li>
+<li>Kiểm tra lịch học tránh trùng phòng</li>
+<li>Số sinh viên phù hợp phòng học</li>
+</ul>
+
+</div>
+
+<div class="note">
+
+<h4>Lưu ý hệ thống</h4>
+
+<p>
+Dữ liệu sau khi lưu sẽ cập nhật ngay lập tức vào hệ thống sinh viên.
+</p>
+
+</div>
+
+</div>
+
+<!-- FORM -->
+
+<div class="form-box">
+
+<form>
+
+<div class="form-grid">
+
+<div class="full">
+<label>Môn học</label>
+<select>
+<option>Chọn môn học</option>
+<option>Lập trình cơ bản</option>
+<option>Cấu trúc dữ liệu</option>
+<option>Cơ sở dữ liệu</option>
+<option>Toán cao cấp</option>
+</select>
+</div>
+
+<div>
+<label>Học kỳ</label>
+<select>
+<option>Học kỳ I</option>
+<option>Học kỳ II</option>
+<option>Học kỳ Hè</option>
+</select>
+</div>
+
+<div>
+<label>Phòng học</label>
+<input type="text" placeholder="Ví dụ A201">
+</div>
+
+<div>
+<label>Lịch học</label>
+<input type="text" placeholder="Thứ 2 (Tiết 1-3)">
+</div>
+
+<div>
+<label>Số sinh viên tối đa</label>
+<input type="number" placeholder="50">
+</div>
+
+</div>
+
+<div class="buttons">
+
+<button class="cancel">Hủy bỏ</button>
+
+<button class="save">Lưu lớp học phần</button>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+</main>
+
+<footer>
+
+<p>© 2024 Hệ thống Quản lý Đào tạo</p>
+
+<div>
+<a href="#">Bản quyền</a>
+<a href="#">Hỗ trợ kỹ thuật</a>
+</div>
+
+</footer>
+
+</body>
+</html>
