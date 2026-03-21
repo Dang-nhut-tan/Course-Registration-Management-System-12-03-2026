@@ -3,9 +3,9 @@ from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime, E
 from sqlalchemy.orm import relationship
 from app import db, app
 from enum import Enum as PyEnum
+import hashlib
+from datetime import datetime
 
-
-# ================= BASE =================
 class BaseModel(db.Model):
     __abstract__ = True
 
@@ -15,7 +15,6 @@ class BaseModel(db.Model):
         return getattr(self, 'name', str(self.id))
 
 
-# ================= ENUM =================
 class UserRole(PyEnum):
     ADMIN = "admin"
     STUDENT = "student"
@@ -25,7 +24,6 @@ class EnrollmentStatus(PyEnum):
     CANCELED = "canceled"
 
 
-# ================= USER =================
 class User(BaseModel):
     __tablename__ = 'users'
 
@@ -35,11 +33,10 @@ class User(BaseModel):
 
     role = Column(Enum(UserRole), default=UserRole.STUDENT)
 
-    student_id = Column(Integer, ForeignKey('students.id'), nullable=True)
+    student_code = Column(String(50), ForeignKey('students.student_code'))
     student = relationship('Student', backref='user', uselist=False)
 
 
-# ================= CAMPUS =================
 class Campus(BaseModel):
     __tablename__ = 'campuses'
 
@@ -49,7 +46,7 @@ class Campus(BaseModel):
     rooms = relationship('Room', backref='campus', lazy=True)
 
 
-# ================= ROOM =================
+
 class Room(BaseModel):
     __tablename__ = 'rooms'
 
@@ -59,8 +56,6 @@ class Room(BaseModel):
 
     campus_id = Column(Integer, ForeignKey('campuses.id'), nullable=False)
 
-
-# ================= FACULTY =================
 class Faculty(BaseModel):
     __tablename__ = 'faculties'
 
@@ -68,7 +63,6 @@ class Faculty(BaseModel):
     majors = relationship('Major', backref='faculty', lazy=True)
 
 
-# ================= MAJOR =================
 class Major(BaseModel):
     __tablename__ = 'majors'
 
@@ -76,7 +70,6 @@ class Major(BaseModel):
     faculty_id = Column(Integer, ForeignKey('faculties.id'), nullable=False)
 
 
-# ================= COURSE =================
 class Course(BaseModel):
     __tablename__ = 'courses'
 
@@ -87,15 +80,12 @@ class Course(BaseModel):
     faculty_id = Column(Integer, ForeignKey('faculties.id'))
 
 
-# ================= COURSE-MAJOR =================
 class CourseMajor(db.Model):
     __tablename__ = 'course_major'
 
     course_id = Column(Integer, ForeignKey('courses.id'), primary_key=True)
     major_id = Column(Integer, ForeignKey('majors.id'), primary_key=True)
 
-
-# ================= PREREQUISITE =================
 class CoursePrerequisite(db.Model):
     __tablename__ = 'course_prerequisite'
 
@@ -103,7 +93,6 @@ class CoursePrerequisite(db.Model):
     prerequisite_id = Column(Integer, ForeignKey('courses.id'), primary_key=True)
 
 
-# ================= TEACHER =================
 class Teacher(BaseModel):
     __tablename__ = 'teachers'
 
@@ -111,7 +100,6 @@ class Teacher(BaseModel):
     faculty_id = Column(Integer, ForeignKey('faculties.id'))
 
 
-# ================= TEACHER-COURSE =================
 class TeacherCourse(db.Model):
     __tablename__ = 'teacher_course'
 
@@ -119,11 +107,10 @@ class TeacherCourse(db.Model):
     course_id = Column(Integer, ForeignKey('courses.id'), primary_key=True)
 
 
-# ================= STUDENT =================
-class Student(BaseModel):
+class Student(db.Model):
     __tablename__ = 'students'
 
-    student_code = Column(String(50), unique=True, nullable=False)
+    student_code = Column(String(50),primary_key=True, unique=True, nullable=False)
     name = Column(String(255))
     birth_year = Column(Integer)
     hometown = Column(String(255))
@@ -132,8 +119,6 @@ class Student(BaseModel):
 
     major_id = Column(Integer, ForeignKey('majors.id'), nullable=False)
 
-
-# ================= CLASS SECTION =================
 class ClassSection(BaseModel):
     __tablename__ = 'class_sections'
 
@@ -152,7 +137,6 @@ class ClassSection(BaseModel):
     enrollments = relationship('Enrollment', backref='class_section', lazy=True)
 
 
-# ================= SCHEDULE =================
 class Schedule(BaseModel):
     __tablename__ = 'schedules'
 
@@ -163,18 +147,254 @@ class Schedule(BaseModel):
     end_time = Column(Time)
 
 
-# ================= ENROLLMENT =================
 class Enrollment(BaseModel):
     __tablename__ = 'enrollments'
 
-    student_id = Column(Integer, ForeignKey('students.id'))
+    student_code = Column(String(50), ForeignKey('students.student_code'))
     class_section_id = Column(Integer, ForeignKey('class_sections.id'))
     status = Column(Enum(EnrollmentStatus))
 
     student = relationship('Student', backref='enrollments')
 
+sample_data = {
+  "faculties": [
+    { "id": 1, "name": "CNTT" }
+  ],
 
-# ================= CREATE DB =================
+  "majors": [
+    { "id": 1, "name": "HTTQL", "faculty_id": 1 }
+  ],
+
+  "students": [
+    {
+      "student_code": "2354050113",
+      "name": "Nguyen Van A",
+      "birth_year": 2003,
+      "major_id": 1
+    }
+  ],
+
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "password": "admin123",
+      "role": "admin"
+    },
+    {
+      "id": 2,
+      "student_code": "2354050113",
+      "password": "123456",
+      "role": "student"
+    }
+  ],
+
+  "courses": [
+    {
+      "id": 1,
+      "name": "Lap trinh Python",
+      "credits": 3,
+      "faculty_id": 1
+    },
+    {
+      "id": 2,
+      "name": "Cau truc du lieu",
+      "credits": 4,
+      "faculty_id": 1
+    }
+  ],
+
+  "course_prerequisites": [
+    {
+      "course_id": 2,
+      "prerequisite_id": 1
+    }
+  ],
+
+  "teachers": [
+    {
+      "id": 1,
+      "name": "Thay B",
+      "faculty_id": 1
+    }
+  ],
+
+  "rooms": [
+    {
+      "id": 1,
+      "name": "A101",
+      "capacity": 50,
+      "campus_id": 1
+    }
+  ],
+
+  "campuses": [
+    {
+      "id": 1,
+      "name": "Co so 1",
+      "address": "TPHCM"
+    }
+  ],
+
+  "class_sections": [
+    {
+      "id": 1,
+      "course_id": 1,
+      "teacher_id": 1,
+      "room_id": 1,
+      "semester": "2025-1",
+      "max_students": 50,
+      "start_date": "2025-09-01",
+      "end_date": "2025-12-01",
+      "registration_deadline": "2025-08-25"
+    }
+  ],
+
+  "schedules": [
+    {
+      "id": 1,
+      "class_section_id": 1,
+      "day_of_week": 2,
+      "start_time": "07:00",
+      "end_time": "09:00"
+    }
+  ],
+
+  "enrollments": [
+    {
+      "id": 1,
+      "student_code": "2354050113",
+      "class_section_id": 1,
+      "status": "registered"
+    }
+  ]
+}
+
+
+
+
+def seed_data():
+    db.drop_all()
+    db.create_all()
+
+    for f in sample_data["faculties"]:
+        db.session.add(Faculty(
+            id=f["id"],
+            name=f["name"]
+        ))
+    db.session.commit()
+
+
+    for m in sample_data["majors"]:
+        db.session.add(Major(
+            id=m["id"],
+            name=m["name"],
+            faculty_id=m["faculty_id"]
+        ))
+    db.session.commit()
+
+    for s in sample_data["students"]:
+        db.session.add(Student(
+            student_code=s["student_code"],
+            name=s["name"],
+            birth_year=s["birth_year"],
+            major_id=s["major_id"]
+        ))
+    db.session.commit()
+
+    for u in sample_data["users"]:
+        role = UserRole(u["role"])
+
+        user = User(
+            id=u["id"],
+            username=u.get("username"),
+            password=hashlib.md5(u['password'].strip().encode('utf-8')).hexdigest(),
+            role=role
+        )
+
+        if role == UserRole.STUDENT:
+            user.student_code = u["student_code"]
+
+        db.session.add(user)
+    db.session.commit()
+
+    for c in sample_data["campuses"]:
+        db.session.add(Campus(
+            id=c["id"],
+            name=c["name"],
+            address=c["address"]
+        ))
+    db.session.commit()
+
+    for r in sample_data["rooms"]:
+        db.session.add(Room(
+            id=r["id"],
+            name=r["name"],
+            capacity=r["capacity"],
+            campus_id=r["campus_id"]
+        ))
+    db.session.commit()
+
+
+    for c in sample_data["courses"]:
+        db.session.add(Course(
+            id=c["id"],
+            name=c["name"],
+            credits=c["credits"],
+            faculty_id=c["faculty_id"]
+        ))
+    db.session.commit()
+
+
+    for cp in sample_data.get("course_prerequisites", []):
+        db.session.add(CoursePrerequisite(
+            course_id=cp["course_id"],
+            prerequisite_id=cp["prerequisite_id"]
+        ))
+    db.session.commit()
+
+    for t in sample_data["teachers"]:
+        db.session.add(Teacher(
+            id=t["id"],
+            name=t["name"],
+            faculty_id=t["faculty_id"]
+        ))
+    db.session.commit()
+
+    for cs in sample_data["class_sections"]:
+        db.session.add(ClassSection(
+            id=cs["id"],
+            course_id=cs["course_id"],
+            teacher_id=cs["teacher_id"],
+            room_id=cs["room_id"],
+            semester=cs["semester"],
+            max_students=cs["max_students"],
+            start_date=datetime.fromisoformat(cs["start_date"]),
+            end_date=datetime.fromisoformat(cs["end_date"]),
+            registration_deadline=datetime.fromisoformat(cs["registration_deadline"])
+        ))
+    db.session.commit()
+
+    for s in sample_data["schedules"]:
+        db.session.add(Schedule(
+            id=s["id"],
+            class_section_id=s["class_section_id"],
+            day_of_week=s["day_of_week"],
+            start_time=datetime.strptime(s["start_time"], "%H:%M").time(),
+            end_time=datetime.strptime(s["end_time"], "%H:%M").time()
+        ))
+    db.session.commit()
+
+    for e in sample_data["enrollments"]:
+        db.session.add(Enrollment(
+            id=e["id"],
+            student_code=e["student_code"],
+            class_section_id=e["class_section_id"],
+            status=EnrollmentStatus(e["status"])
+        ))
+    db.session.commit()
+
+    print(" Seed full data thành công!")
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()
+        seed_data()
