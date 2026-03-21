@@ -93,7 +93,11 @@
           <p class="text-center text-gray-500 mb-6 text-sm">
             Vui lòng đăng nhập bằng tài khoản sinh viên
           </p>
-
+          {% if err_msg %}
+          <div class="alert alert-danger">
+            <h4>{{ err_msg }}</h4>
+          </div>
+          {% endif %}
           <form id="loginForm" method="POST" class="space-y-5">
             <!-- USERNAME -->
             <div>
@@ -102,8 +106,8 @@
               </label>
 
               <input
-                id="username"
-                name="username"
+                id="student_code"
+                name="student_code"
                 class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Mã số sinh viên"
               />
@@ -152,7 +156,7 @@
 
     <!-- FOOTER -->
     <footer class="text-center text-sm text-gray-500 mb-4">
-      <p> 2024 Phòng Đào tạo - Đại học Mở</p>
+      <p>2024 Phòng Đào tạo - Đại học Mở</p>
 
       <p class="mt-1">Chính sách bảo mật • Điều khoản sử dụng</p>
     </footer>
