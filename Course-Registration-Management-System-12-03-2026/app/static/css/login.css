@@ -1,0 +1,58 @@
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+.bg-background-light {
+    background-color: #f4f6fb;
+}
+
+.bg-primary {
+    background-color: #135bec;
+}
+
+.link-help {
+    background-color: #135bec;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+}
+
+/* Header gradient */
+.login-header{
+    height:120px;
+    background: linear-gradient(90deg,#135bec,#4b8df8);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+/* icon */
+.login-icon{
+    font-size:40px;
+    color:white;
+}
+
+/* input */
+.input{
+    width:100%;
+    border:1px solid #e2e8f0;
+    border-radius:8px;
+    padding:10px 12px;
+}
+
+.input:focus{
+    outline:none;
+    border-color:#135bec;
+}
+
+/* login button */
+.login-btn{
+    width:100%;
+    background:#135bec;
+    color:white;
+    padding:12px;
+    border-radius:8px;
+    font-weight:600;
+}
+
+
