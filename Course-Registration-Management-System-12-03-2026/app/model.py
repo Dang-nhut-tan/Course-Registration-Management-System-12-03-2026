@@ -171,6 +171,12 @@ sample_data = {
       "name": "Nguyen Van A",
       "birth_year": 2003,
       "major_id": 1
+    },
+    {
+      "student_code": "2354050118",
+      "name": "Le Thi B",
+      "birth_year": 2003,
+      "major_id": 1
     }
   ],
 
@@ -185,6 +191,12 @@ sample_data = {
       "id": 2,
       "student_code": "2354050113",
       "password": "123456",
+      "role": "student"
+    },
+    {
+      "id": 3,
+      "student_code": "2354050118",
+      "password": "12345",
       "role": "student"
     }
   ],
@@ -225,6 +237,12 @@ sample_data = {
       "name": "A101",
       "capacity": 50,
       "campus_id": 1
+    },
+    {
+      "id": 2,
+      "name": "B101",
+      "capacity": 50,
+      "campus_id": 1
     }
   ],
 
@@ -242,6 +260,17 @@ sample_data = {
       "course_id": 1,
       "teacher_id": 1,
       "room_id": 1,
+      "semester": "2025-1",
+      "max_students": 50,
+      "start_date": "2025-09-01",
+      "end_date": "2025-12-01",
+      "registration_deadline": "2025-08-25"
+    },
+    {
+      "id": 2,
+      "course_id": 2,
+      "teacher_id": 1,
+      "room_id": 2,
       "semester": "2025-1",
       "max_students": 50,
       "start_date": "2025-09-01",
@@ -265,6 +294,12 @@ sample_data = {
       "id": 1,
       "student_code": "2354050113",
       "class_section_id": 1,
+      "status": "registered"
+    },
+    {
+      "id": 2,
+      "student_code": "2354050118",
+      "class_section_id": 2,
       "status": "registered"
     }
   ]
