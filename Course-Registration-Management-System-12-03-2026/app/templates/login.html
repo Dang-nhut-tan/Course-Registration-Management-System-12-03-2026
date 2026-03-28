@@ -93,12 +93,13 @@
           <p class="text-center text-gray-500 mb-6 text-sm">
             Vui lòng đăng nhập bằng tài khoản sinh viên
           </p>
-          {% if err_msg %}
+
+          <form id="loginForm" method="POST" class="space-y-5">
+             {% if err_msg %}
           <div class="alert alert-danger">
             <h4>{{ err_msg }}</h4>
           </div>
           {% endif %}
-          <form id="loginForm" method="POST" class="space-y-5">
             <!-- USERNAME -->
             <div>
               <label class="block text-sm font-semibold mb-1">

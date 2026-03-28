@@ -1,6 +1,7 @@
 from flask import redirect, render_template, request, url_for
 from app import app
 from app import utils
+from app.model import ClassSection, Student,Course
 
 
 @app.route("/",methods=['get','post'])
@@ -22,7 +23,18 @@ def forgot_password():
 
 @app.route("/index")
 def index():
-    return render_template("index.html")
+    course_id = request.args.get("course")
+    faculty_id = request.args.get("faculty")
+    classes=request.args.get("class")
+
+    sections =utils.get_sections(course_id, faculty_id)
+    filters = utils.get_filter_data()
+    return render_template(
+        "index.html",
+        sections=sections,
+        courses=filters["courses"],
+        faculties=filters["faculties"]
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)

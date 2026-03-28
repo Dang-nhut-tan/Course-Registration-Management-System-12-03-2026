@@ -5,6 +5,7 @@ from app import db, app
 from enum import Enum as PyEnum
 import hashlib
 from datetime import datetime
+from flask_login import UserMixin
 
 class BaseModel(db.Model):
     __abstract__ = True
@@ -24,7 +25,7 @@ class EnrollmentStatus(PyEnum):
     CANCELED = "canceled"
 
 
-class User(BaseModel):
+class User(BaseModel,UserMixin):
     __tablename__ = 'users'
 
     username = Column(String(100), unique=True, nullable=True)  # admin dùng
@@ -126,6 +127,11 @@ class ClassSection(BaseModel):
     teacher_id = Column(Integer, ForeignKey('teachers.id'))
     room_id = Column(Integer, ForeignKey('rooms.id'))
 
+    course = relationship('Course')
+    teacher = relationship('Teacher')
+    room = relationship('Room')
+
+
     semester = Column(String(50))
     max_students = Column(Integer)
 
@@ -192,13 +198,13 @@ sample_data = {
   "courses": [
     {
       "id": 1,
-      "name": "Lap trinh Python",
+      "name": "Kiểm thử phần mềm",
       "credits": 3,
       "faculty_id": 1
     },
     {
       "id": 2,
-      "name": "Cau truc du lieu",
+      "name": "Cấu trúc dữ liệu và giải thuật",
       "credits": 4,
       "faculty_id": 1
     }
