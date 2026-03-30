@@ -5,6 +5,8 @@ from app import db, app
 from enum import Enum as PyEnum
 import hashlib
 from datetime import datetime
+from flask_login import UserMixin
+
 
 class BaseModel(db.Model):
     __abstract__ = True
@@ -19,12 +21,13 @@ class UserRole(PyEnum):
     ADMIN = "admin"
     STUDENT = "student"
 
+
 class EnrollmentStatus(PyEnum):
     REGISTERED = "registered"
     CANCELED = "canceled"
 
 
-class User(BaseModel):
+class User(BaseModel, UserMixin):
     __tablename__ = 'users'
 
     username = Column(String(100), unique=True, nullable=True)  # admin dùng
@@ -46,7 +49,6 @@ class Campus(BaseModel):
     rooms = relationship('Room', backref='campus', lazy=True)
 
 
-
 class Room(BaseModel):
     __tablename__ = 'rooms'
 
@@ -55,6 +57,7 @@ class Room(BaseModel):
     capacity = Column(Integer)
 
     campus_id = Column(Integer, ForeignKey('campuses.id'), nullable=False)
+
 
 class Faculty(BaseModel):
     __tablename__ = 'faculties'
@@ -86,6 +89,7 @@ class CourseMajor(db.Model):
     course_id = Column(Integer, ForeignKey('courses.id'), primary_key=True)
     major_id = Column(Integer, ForeignKey('majors.id'), primary_key=True)
 
+
 class CoursePrerequisite(db.Model):
     __tablename__ = 'course_prerequisite'
 
@@ -110,7 +114,7 @@ class TeacherCourse(db.Model):
 class Student(db.Model):
     __tablename__ = 'students'
 
-    student_code = Column(String(50),primary_key=True, unique=True, nullable=False)
+    student_code = Column(String(50), primary_key=True, unique=True, nullable=False)
     name = Column(String(255))
     birth_year = Column(Integer)
     hometown = Column(String(255))
@@ -119,12 +123,17 @@ class Student(db.Model):
 
     major_id = Column(Integer, ForeignKey('majors.id'), nullable=False)
 
+
 class ClassSection(BaseModel):
     __tablename__ = 'class_sections'
 
     course_id = Column(Integer, ForeignKey('courses.id'))
     teacher_id = Column(Integer, ForeignKey('teachers.id'))
     room_id = Column(Integer, ForeignKey('rooms.id'))
+
+    course = relationship('Course')
+    teacher = relationship('Teacher')
+    room = relationship('Room')
 
     semester = Column(String(50))
     max_students = Column(Integer)
@@ -156,13 +165,19 @@ class Enrollment(BaseModel):
 
     student = relationship('Student', backref='enrollments')
 
+
 sample_data = {
   "faculties": [
-    { "id": 1, "name": "CNTT" }
+    {"id": 1, "name": "CNTT"},
+    {"id": 2, "name": "Kinh tế"},
+    {"id": 3, "name": "Quản trị kinh doanh"}
   ],
 
   "majors": [
-    { "id": 1, "name": "HTTQL", "faculty_id": 1 }
+    {"id": 1, "name": "HTTQL", "faculty_id": 1},
+    {"id": 2, "name": "Khoa học máy tính", "faculty_id": 1},
+    {"id": 3, "name": "Tài chính - Ngân hàng", "faculty_id": 2},
+    {"id": 4, "name": "Marketing", "faculty_id": 3}
   ],
 
   "students": [
@@ -171,6 +186,18 @@ sample_data = {
       "name": "Nguyen Van A",
       "birth_year": 2003,
       "major_id": 1
+    },
+    {
+      "student_code": "2354050114",
+      "name": "Tran Thi B",
+      "birth_year": 2003,
+      "major_id": 3
+    },
+    {
+      "student_code": "2354050115",
+      "name": "Le Van C",
+      "birth_year": 2002,
+      "major_id": 4
     }
   ],
 
@@ -186,54 +213,56 @@ sample_data = {
       "student_code": "2354050113",
       "password": "123456",
       "role": "student"
+    },
+    {
+      "id": 3,
+      "student_code": "2354050114",
+      "password": "123456",
+      "role": "student"
+    },
+    {
+      "id": 4,
+      "student_code": "2354050115",
+      "password": "123456",
+      "role": "student"
     }
   ],
 
   "courses": [
-    {
-      "id": 1,
-      "name": "Lap trinh Python",
-      "credits": 3,
-      "faculty_id": 1
-    },
-    {
-      "id": 2,
-      "name": "Cau truc du lieu",
-      "credits": 4,
-      "faculty_id": 1
-    }
+    {"id": 1, "name": "Kiểm thử phần mềm", "credits": 3, "faculty_id": 1, "is_shared": False},
+    {"id": 2, "name": "Cấu trúc dữ liệu và giải thuật", "credits": 4, "faculty_id": 1, "is_shared": False},
+    {"id": 3, "name": "Cơ sở dữ liệu", "credits": 3, "faculty_id": 1, "is_shared": False},
+    {"id": 4, "name": "Phân tích thiết kế hệ thống", "credits": 3, "faculty_id": 1, "is_shared": False},
+    {"id": 5, "name": "Lập trình Web", "credits": 4, "faculty_id": 1, "is_shared": False},
+    {"id": 6, "name": "Mạng máy tính", "credits": 3, "faculty_id": 1, "is_shared": False},
+    {"id": 7, "name": "Nguyên lý kế toán", "credits": 3, "faculty_id": 2, "is_shared": False},
+    {"id": 8, "name": "Tài chính doanh nghiệp", "credits": 3, "faculty_id": 2, "is_shared": False},
+    {"id": 9, "name": "Marketing căn bản", "credits": 3, "faculty_id": 3, "is_shared": False},
+    {"id": 10, "name": "Tin học đại cương", "credits": 2, "faculty_id": 1, "is_shared": True}
   ],
 
   "course_prerequisites": [
-    {
-      "course_id": 2,
-      "prerequisite_id": 1
-    }
+    {"course_id": 2, "prerequisite_id": 1},
+    {"course_id": 4, "prerequisite_id": 3},
+    {"course_id": 8, "prerequisite_id": 7}
   ],
 
   "teachers": [
-    {
-      "id": 1,
-      "name": "Thay B",
-      "faculty_id": 1
-    }
+    {"id": 1, "name": "Thầy B", "faculty_id": 1},
+    {"id": 2, "name": "Cô C", "faculty_id": 1},
+    {"id": 3, "name": "Thầy D", "faculty_id": 1},
+    {"id": 4, "name": "Thầy K", "faculty_id": 2},
+    {"id": 5, "name": "Cô M", "faculty_id": 3}
   ],
 
   "rooms": [
-    {
-      "id": 1,
-      "name": "A101",
-      "capacity": 50,
-      "campus_id": 1
-    }
+    {"id": 1, "name": "A101", "capacity": 50, "campus_id": 1},
+    {"id": 2, "name": "A102", "capacity": 45, "campus_id": 1},
+    {"id": 3, "name": "B201", "capacity": 50, "campus_id": 1}
   ],
 
   "campuses": [
-    {
-      "id": 1,
-      "name": "Co so 1",
-      "address": "TPHCM"
-    }
+    {"id": 1, "name": "Cơ sở 1", "address": "TPHCM"}
   ],
 
   "class_sections": [
@@ -247,30 +276,122 @@ sample_data = {
       "start_date": "2025-09-01",
       "end_date": "2025-12-01",
       "registration_deadline": "2025-08-25"
+    },
+    {
+      "id": 2,
+      "course_id": 2,
+      "teacher_id": 2,
+      "room_id": 2,
+      "semester": "2025-1",
+      "max_students": 45,
+      "start_date": "2025-09-03",
+      "end_date": "2025-12-05",
+      "registration_deadline": "2025-08-25"
+    },
+    {
+      "id": 3,
+      "course_id": 3,
+      "teacher_id": 1,
+      "room_id": 3,
+      "semester": "2025-1",
+      "max_students": 60,
+      "start_date": "2025-09-04",
+      "end_date": "2025-12-10",
+      "registration_deadline": "2025-08-25"
+    },
+    {
+      "id": 4,
+      "course_id": 4,
+      "teacher_id": 3,
+      "room_id": 1,
+      "semester": "2025-1",
+      "max_students": 40,
+      "start_date": "2025-09-05",
+      "end_date": "2025-12-12",
+      "registration_deadline": "2025-08-25"
+    },
+    {
+      "id": 5,
+      "course_id": 5,
+      "teacher_id": 2,
+      "room_id": 2,
+      "semester": "2025-1",
+      "max_students": 35,
+      "start_date": "2025-09-06",
+      "end_date": "2025-12-15",
+      "registration_deadline": "2025-08-25"
+    },
+    {
+      "id": 6,
+      "course_id": 6,
+      "teacher_id": 3,
+      "room_id": 3,
+      "semester": "2025-1",
+      "max_students": 55,
+      "start_date": "2025-09-07",
+      "end_date": "2025-12-18",
+      "registration_deadline": "2025-08-25"
+    },
+    {
+      "id": 7,
+      "course_id": 7,
+      "teacher_id": 4,
+      "room_id": 1,
+      "semester": "2025-1",
+      "max_students": 50,
+      "start_date": "2025-09-08",
+      "end_date": "2025-12-19",
+      "registration_deadline": "2025-08-25"
+    },
+    {
+      "id": 8,
+      "course_id": 8,
+      "teacher_id": 4,
+      "room_id": 2,
+      "semester": "2025-1",
+      "max_students": 45,
+      "start_date": "2025-09-09",
+      "end_date": "2025-12-20",
+      "registration_deadline": "2025-08-25"
+    },
+    {
+      "id": 9,
+      "course_id": 9,
+      "teacher_id": 5,
+      "room_id": 3,
+      "semester": "2025-1",
+      "max_students": 40,
+      "start_date": "2025-09-10",
+      "end_date": "2025-12-21",
+      "registration_deadline": "2025-08-25"
     }
   ],
 
   "schedules": [
-    {
-      "id": 1,
-      "class_section_id": 1,
-      "day_of_week": 2,
-      "start_time": "07:00",
-      "end_time": "09:00"
-    }
+    # CNTT
+    {"id": 1, "class_section_id": 1, "day_of_week": 2, "start_time": "07:00", "end_time": "11:30"},
+    {"id": 2, "class_section_id": 2, "day_of_week": 3, "start_time": "07:00", "end_time": "11:30"},
+    {"id": 3, "class_section_id": 3, "day_of_week": 4, "start_time": "13:00", "end_time": "17:30"},
+    {"id": 4, "class_section_id": 4, "day_of_week": 5, "start_time": "07:00", "end_time": "11:30"},
+    {"id": 5, "class_section_id": 5, "day_of_week": 6, "start_time": "13:00", "end_time": "17:30"},
+    {"id": 6, "class_section_id": 6, "day_of_week": 7, "start_time": "07:00", "end_time": "11:30"},
+
+    # Kinh tế
+    {"id": 7, "class_section_id": 7, "day_of_week": 2, "start_time": "13:00", "end_time": "17:30"},
+    {"id": 8, "class_section_id": 8, "day_of_week": 4, "start_time": "07:00", "end_time": "11:30"},
+
+    # QTKD
+    {"id": 9, "class_section_id": 9, "day_of_week": 6, "start_time": "13:00", "end_time": "17:30"}
   ],
 
   "enrollments": [
-    {
-      "id": 1,
-      "student_code": "2354050113",
-      "class_section_id": 1,
-      "status": "registered"
-    }
+    {"id": 1, "student_code": "2354050113", "class_section_id": 1, "status": "registered"},
+    {"id": 2, "student_code": "2354050113", "class_section_id": 3, "status": "registered"},
+    {"id": 3, "student_code": "2354050113", "class_section_id": 5, "status": "canceled"},
+    {"id": 4, "student_code": "2354050114", "class_section_id": 7, "status": "registered"},
+    {"id": 5, "student_code": "2354050115", "class_section_id": 9, "status": "registered"}
   ]
 }
-
-
 
 
 def seed_data():
@@ -283,7 +404,6 @@ def seed_data():
             name=f["name"]
         ))
     db.session.commit()
-
 
     for m in sample_data["majors"]:
         db.session.add(Major(
@@ -335,16 +455,15 @@ def seed_data():
         ))
     db.session.commit()
 
-
     for c in sample_data["courses"]:
         db.session.add(Course(
             id=c["id"],
             name=c["name"],
             credits=c["credits"],
-            faculty_id=c["faculty_id"]
+            faculty_id=c["faculty_id"],
+            is_shared=c.get("is_shared", False)
         ))
     db.session.commit()
-
 
     for cp in sample_data.get("course_prerequisites", []):
         db.session.add(CoursePrerequisite(
@@ -394,7 +513,9 @@ def seed_data():
         ))
     db.session.commit()
 
-    print(" Seed full data thành công!")
+    print("Seed full data thành công!")
+
+
 if __name__ == '__main__':
     with app.app_context():
         seed_data()
