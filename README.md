@@ -1,16 +1,15 @@
-# Hệ thống Quản lý Đăng ký Khóa học
+Course Registration Management System
 
-## Giới thiệu
-Hệ thống Quản lý Đăng ký Khóa học là một ứng dụng giúp sinh viên và giảng viên quản lý quá trình đăng ký và theo dõi các khóa học một cách hiệu quả. Người dùng có thể đăng ký, hủy đăng ký, và xem thông tin về các khóa học đang mở.
+## Introduction
+The **Course Registration Management System** is an application designed to help students and faculty members manage the course enrollment process and tracking efficiently. Users can register for classes, drop courses, and view detailed information regarding available offerings.
 
-## Tính năng
-- Đăng ký khóa học
-- Hủy đăng ký khóa học
-- Xem danh sách các khóa học
-- Theo dõi trạng thái đăng ký
+## Key Features
+* **Course Registration:** Enroll in new subjects during the active registration period.
+* **Course Withdrawal:** Easily drop or cancel a registration.
+* **Course Catalog:** View a comprehensive list of all open and upcoming courses.
+* **Enrollment Tracking:** Monitor the real-time status of registrations (e.g., Pending, Confirmed).
 
-## Công nghệ sử dụng
-- Ngôn ngữ lập trình: Python
-- Framework: Flask
-- Cơ sở dữ liệu: MySQL
-  
+## Technology Stack
+* **Programming Language:** Python
+* **Web Framework:** Flask
+* **Database:** MySQL
