@@ -1,26 +1,135 @@
-from app.model import ClassSection, Course, Enrollment, Student, User,Faculty
+from app.model import ClassSection, Course, CoursePrerequisite, Enrollment, EnrollmentStatus, User, Faculty
 import hashlib
 from app import db
 
 
 def check_login_student(student_code, password):
     if student_code and password:
-        password=str(hashlib.md5(password.strip().encode('utf-8')).hexdigest())
-        return User.query.filter(User.password.__eq__(password),User.student_code.__eq__(student_code.strip())).first()
+        password = str(hashlib.md5(password.strip().encode('utf-8')).hexdigest())
+        return User.query.filter(
+            User.password.__eq__(password),
+            User.student_code.__eq__(student_code.strip())
+        ).first()
+
 
 def get_sections(course_id=None, faculty_id=None):
     query = ClassSection.query
     if course_id:
-        query = query.filter(ClassSection.course_id == course_id)
+        query = query.filter(ClassSection.course_id == int(course_id))
     if faculty_id:
-        query = query.join(Course).filter(Course.faculty_id == faculty_id)
+        query = query.join(Course).filter(Course.faculty_id == int(faculty_id))
     return query.all()
 
-def get_registered_courses(student_code):
+
+def get_registered_courses(student_code, course_id=None, faculty_id=None):
+    query = Enrollment.query.filter(Enrollment.student_code == student_code)
+
+    if course_id:
+        query = query.join(ClassSection).filter(ClassSection.course_id == int(course_id))
+
+    if faculty_id:
+        query = query.join(ClassSection).join(Course).filter(Course.faculty_id == int(faculty_id))
+
+    return query.all()
+
+
+def get_registered_counts(section_ids):
+    if not section_ids:
+        return {}
+
     enrollments = Enrollment.query.filter(
-        Enrollment.student_code == student_code
+        Enrollment.class_section_id.in_(section_ids),
+        Enrollment.status == EnrollmentStatus.REGISTERED
     ).all()
-    return enrollments
+
+    counts = {}
+    for enrollment in enrollments:
+        counts[enrollment.class_section_id] = counts.get(enrollment.class_section_id, 0) + 1
+    return counts
+
+
+def check_prerequisite_courses(student_code, course_id):
+    prerequisite_rows = CoursePrerequisite.query.filter(
+        CoursePrerequisite.course_id == course_id
+    ).all()
+
+    if not prerequisite_rows:
+        return True, []
+
+    prerequisite_ids = [row.prerequisite_id for row in prerequisite_rows]
+    completed_ids = db.session.query(ClassSection.course_id).join(
+        Enrollment, Enrollment.class_section_id == ClassSection.id
+    ).filter(
+        Enrollment.student_code == student_code,
+        Enrollment.status == EnrollmentStatus.REGISTERED,
+        ClassSection.course_id.in_(prerequisite_ids)
+    ).distinct().all()
+
+    completed_ids = {course_id for course_id, in completed_ids}
+    missing_ids = [course_id for course_id in prerequisite_ids if course_id not in completed_ids]
+
+    if not missing_ids:
+        return True, []
+
+    missing_courses = Course.query.filter(Course.id.in_(missing_ids)).all()
+    return False, [course.name for course in missing_courses]
+
+
+def register_section(student_code, class_section_id):
+    section = ClassSection.query.get(class_section_id)
+    if not section:
+        return False, "Không tìm thấy lớp học phần."
+
+    is_valid, missing_courses = check_prerequisite_courses(student_code, section.course_id)
+    if not is_valid:
+        return False, "Bạn chưa học môn tiên quyết: " + ", ".join(missing_courses) + "."
+
+    enrollment = Enrollment.query.filter(
+        Enrollment.student_code == student_code,
+        Enrollment.class_section_id == class_section_id
+    ).first()
+
+    if enrollment and enrollment.status == EnrollmentStatus.REGISTERED:
+        return False, "Môn này đã được đăng ký rồi."
+
+    registered_count = Enrollment.query.filter(
+        Enrollment.class_section_id == class_section_id,
+        Enrollment.status == EnrollmentStatus.REGISTERED
+    ).count()
+
+    if registered_count >= section.max_students:
+        return False, "Lớp học phần đã hết chỗ."
+
+    if enrollment:
+        enrollment.status = EnrollmentStatus.REGISTERED
+    else:
+        enrollment = Enrollment(
+            student_code=student_code,
+            class_section_id=class_section_id,
+            status=EnrollmentStatus.REGISTERED
+        )
+        db.session.add(enrollment)
+
+    db.session.commit()
+    return True, "Đăng ký môn học thành công."
+
+
+def cancel_registered_course(student_code, enrollment_id):
+    enrollment = Enrollment.query.filter(
+        Enrollment.id == enrollment_id,
+        Enrollment.student_code == student_code
+    ).first()
+
+    if not enrollment:
+        return False, "Không tìm thấy môn đã đăng ký."
+
+    if enrollment.status == EnrollmentStatus.CANCELED:
+        return False, "Môn học này đã được hủy trước đó."
+
+    enrollment.status = EnrollmentStatus.CANCELED
+    db.session.commit()
+    return True, "Hủy môn học thành công."
+
 
 def get_filter_data():
     courses = db.session.query(Course).all()
