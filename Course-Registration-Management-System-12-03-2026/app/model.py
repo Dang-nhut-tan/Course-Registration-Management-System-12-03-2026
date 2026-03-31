@@ -1,12 +1,19 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime, Enum, Time
 from sqlalchemy.orm import relationship
+<<<<<<< HEAD
 from app import db, app
 from enum import Enum as PyEnum
 import hashlib
 from datetime import datetime
 from flask_login import UserMixin
 
+=======
+from app import app, db
+from enum import Enum as PyEnum
+import hashlib
+from datetime import datetime
+>>>>>>> feature/admin
 
 class BaseModel(db.Model):
     __abstract__ = True
@@ -21,13 +28,20 @@ class UserRole(PyEnum):
     ADMIN = "admin"
     STUDENT = "student"
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> feature/admin
 class EnrollmentStatus(PyEnum):
     REGISTERED = "registered"
     CANCELED = "canceled"
 
 
+<<<<<<< HEAD
 class User(BaseModel, UserMixin):
+=======
+class User(BaseModel):
+>>>>>>> feature/admin
     __tablename__ = 'users'
 
     username = Column(String(100), unique=True, nullable=True)  # admin dùng
@@ -49,6 +63,10 @@ class Campus(BaseModel):
     rooms = relationship('Room', backref='campus', lazy=True)
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> feature/admin
 class Room(BaseModel):
     __tablename__ = 'rooms'
 
@@ -58,7 +76,10 @@ class Room(BaseModel):
 
     campus_id = Column(Integer, ForeignKey('campuses.id'), nullable=False)
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> feature/admin
 class Faculty(BaseModel):
     __tablename__ = 'faculties'
 
@@ -89,7 +110,10 @@ class CourseMajor(db.Model):
     course_id = Column(Integer, ForeignKey('courses.id'), primary_key=True)
     major_id = Column(Integer, ForeignKey('majors.id'), primary_key=True)
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> feature/admin
 class CoursePrerequisite(db.Model):
     __tablename__ = 'course_prerequisite'
 
@@ -114,7 +138,11 @@ class TeacherCourse(db.Model):
 class Student(db.Model):
     __tablename__ = 'students'
 
+<<<<<<< HEAD
     student_code = Column(String(50), primary_key=True, unique=True, nullable=False)
+=======
+    student_code = Column(String(50),primary_key=True, unique=True, nullable=False)
+>>>>>>> feature/admin
     name = Column(String(255))
     birth_year = Column(Integer)
     hometown = Column(String(255))
@@ -123,7 +151,10 @@ class Student(db.Model):
 
     major_id = Column(Integer, ForeignKey('majors.id'), nullable=False)
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> feature/admin
 class ClassSection(BaseModel):
     __tablename__ = 'class_sections'
 
@@ -131,10 +162,13 @@ class ClassSection(BaseModel):
     teacher_id = Column(Integer, ForeignKey('teachers.id'))
     room_id = Column(Integer, ForeignKey('rooms.id'))
 
+<<<<<<< HEAD
     course = relationship('Course')
     teacher = relationship('Teacher')
     room = relationship('Room')
 
+=======
+>>>>>>> feature/admin
     semester = Column(String(50))
     max_students = Column(Integer)
 
@@ -165,6 +199,7 @@ class Enrollment(BaseModel):
 
     student = relationship('Student', backref='enrollments')
 
+<<<<<<< HEAD
 
 sample_data = {
   "faculties": [
@@ -178,6 +213,15 @@ sample_data = {
     {"id": 2, "name": "Khoa học máy tính", "faculty_id": 1},
     {"id": 3, "name": "Tài chính - Ngân hàng", "faculty_id": 2},
     {"id": 4, "name": "Marketing", "faculty_id": 3}
+=======
+sample_data = {
+  "faculties": [
+    { "id": 1, "name": "CNTT" }
+  ],
+
+  "majors": [
+    { "id": 1, "name": "HTTQL", "faculty_id": 1 }
+>>>>>>> feature/admin
   ],
 
   "students": [
@@ -188,6 +232,7 @@ sample_data = {
       "major_id": 1
     },
     {
+<<<<<<< HEAD
       "student_code": "2354050114",
       "name": "Tran Thi B",
       "birth_year": 2003,
@@ -198,6 +243,12 @@ sample_data = {
       "name": "Le Van C",
       "birth_year": 2002,
       "major_id": 4
+=======
+      "student_code": "2354050118",
+      "name": "Le Thi B",
+      "birth_year": 2003,
+      "major_id": 1
+>>>>>>> feature/admin
     }
   ],
 
@@ -216,6 +267,7 @@ sample_data = {
     },
     {
       "id": 3,
+<<<<<<< HEAD
       "student_code": "2354050114",
       "password": "123456",
       "role": "student"
@@ -224,11 +276,16 @@ sample_data = {
       "id": 4,
       "student_code": "2354050115",
       "password": "123456",
+=======
+      "student_code": "2354050118",
+      "password": "12345",
+>>>>>>> feature/admin
       "role": "student"
     }
   ],
 
   "courses": [
+<<<<<<< HEAD
     {"id": 1, "name": "Kiểm thử phần mềm", "credits": 3, "faculty_id": 1, "is_shared": False},
     {"id": 2, "name": "Cấu trúc dữ liệu và giải thuật", "credits": 4, "faculty_id": 1, "is_shared": False},
     {"id": 3, "name": "Cơ sở dữ liệu", "credits": 3, "faculty_id": 1, "is_shared": False},
@@ -263,6 +320,58 @@ sample_data = {
 
   "campuses": [
     {"id": 1, "name": "Cơ sở 1", "address": "TPHCM"}
+=======
+    {
+      "id": 1,
+      "name": "Lap trinh Python",
+      "credits": 3,
+      "faculty_id": 1
+    },
+    {
+      "id": 2,
+      "name": "Cau truc du lieu",
+      "credits": 4,
+      "faculty_id": 1
+    }
+  ],
+
+  "course_prerequisites": [
+    {
+      "course_id": 2,
+      "prerequisite_id": 1
+    }
+  ],
+
+  "teachers": [
+    {
+      "id": 1,
+      "name": "Thay B",
+      "faculty_id": 1
+    }
+  ],
+
+  "rooms": [
+    {
+      "id": 1,
+      "name": "A101",
+      "capacity": 50,
+      "campus_id": 1
+    },
+    {
+      "id": 2,
+      "name": "B101",
+      "capacity": 50,
+      "campus_id": 1
+    }
+  ],
+
+  "campuses": [
+    {
+      "id": 1,
+      "name": "Co so 1",
+      "address": "TPHCM"
+    }
+>>>>>>> feature/admin
   ],
 
   "class_sections": [
@@ -280,6 +389,7 @@ sample_data = {
     {
       "id": 2,
       "course_id": 2,
+<<<<<<< HEAD
       "teacher_id": 2,
       "room_id": 2,
       "semester": "2025-1",
@@ -363,11 +473,20 @@ sample_data = {
       "max_students": 40,
       "start_date": "2025-09-10",
       "end_date": "2025-12-21",
+=======
+      "teacher_id": 1,
+      "room_id": 2,
+      "semester": "2025-1",
+      "max_students": 50,
+      "start_date": "2025-09-01",
+      "end_date": "2025-12-01",
+>>>>>>> feature/admin
       "registration_deadline": "2025-08-25"
     }
   ],
 
   "schedules": [
+<<<<<<< HEAD
     # CNTT
     {"id": 1, "class_section_id": 1, "day_of_week": 2, "start_time": "07:00", "end_time": "11:30"},
     {"id": 2, "class_section_id": 2, "day_of_week": 3, "start_time": "07:00", "end_time": "11:30"},
@@ -390,10 +509,39 @@ sample_data = {
     {"id": 3, "student_code": "2354050113", "class_section_id": 5, "status": "canceled"},
     {"id": 4, "student_code": "2354050114", "class_section_id": 7, "status": "registered"},
     {"id": 5, "student_code": "2354050115", "class_section_id": 9, "status": "registered"}
+=======
+    {
+      "id": 1,
+      "class_section_id": 1,
+      "day_of_week": 2,
+      "start_time": "07:00",
+      "end_time": "09:00"
+    }
+  ],
+
+  "enrollments": [
+    {
+      "id": 1,
+      "student_code": "2354050113",
+      "class_section_id": 1,
+      "status": "registered"
+    },
+    {
+      "id": 2,
+      "student_code": "2354050118",
+      "class_section_id": 2,
+      "status": "registered"
+    }
+>>>>>>> feature/admin
   ]
 }
 
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> feature/admin
 def seed_data():
     db.drop_all()
     db.create_all()
@@ -405,6 +553,10 @@ def seed_data():
         ))
     db.session.commit()
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> feature/admin
     for m in sample_data["majors"]:
         db.session.add(Major(
             id=m["id"],
@@ -455,16 +607,28 @@ def seed_data():
         ))
     db.session.commit()
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> feature/admin
     for c in sample_data["courses"]:
         db.session.add(Course(
             id=c["id"],
             name=c["name"],
             credits=c["credits"],
+<<<<<<< HEAD
             faculty_id=c["faculty_id"],
             is_shared=c.get("is_shared", False)
         ))
     db.session.commit()
 
+=======
+            faculty_id=c["faculty_id"]
+        ))
+    db.session.commit()
+
+
+>>>>>>> feature/admin
     for cp in sample_data.get("course_prerequisites", []):
         db.session.add(CoursePrerequisite(
             course_id=cp["course_id"],
@@ -513,9 +677,16 @@ def seed_data():
         ))
     db.session.commit()
 
+<<<<<<< HEAD
     print("Seed full data thành công!")
 
 
 if __name__ == '__main__':
     with app.app_context():
         seed_data()
+=======
+    print(" Seed full data thành công!")
+if __name__ == '__main__':
+    with app.app_context():
+        seed_data()
+>>>>>>> feature/admin

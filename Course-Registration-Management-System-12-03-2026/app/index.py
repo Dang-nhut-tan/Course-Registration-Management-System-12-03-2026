@@ -1,8 +1,13 @@
+<<<<<<< HEAD
 from flask import redirect, render_template, request, session, url_for
+=======
+from flask import redirect, render_template, request, url_for
+>>>>>>> feature/admin
 from app import app
 from app import utils
 
 
+<<<<<<< HEAD
 @app.route("/", methods=['get', 'post'])
 def login():
     err_msg = ''
@@ -25,11 +30,26 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+=======
+@app.route("/",methods=['get','post'])
+def login():
+    err_msg=''
+    if request.method.__eq__('POST'):
+        student_code=request.form.get('student_code')
+        password=request.form.get('password')
+        user=utils.check_login_student(student_code=student_code,password=password)
+        if user:
+            return redirect(url_for('index'))
+        else:
+            return 'MSSV hoặc mật khẩu không chính xác'
+    return render_template("login.html",err_msg=err_msg)
+>>>>>>> feature/admin
 
 @app.route("/forgot-password")
 def forgot_password():
     return render_template("forgot-password.html")
 
+<<<<<<< HEAD
 
 @app.route("/register-course", methods=['POST'])
 def register_course():
@@ -100,4 +120,13 @@ def index():
 
 
 if __name__ == "__main__":
+=======
+@app.route("/index")
+def index():
+    return render_template("index.html")
+
+if __name__ == "__main__":
+    from app.admin import *
+
+>>>>>>> feature/admin
     app.run(debug=True)

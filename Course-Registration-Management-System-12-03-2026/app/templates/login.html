@@ -93,13 +93,21 @@
           <p class="text-center text-gray-500 mb-6 text-sm">
             Vui lòng đăng nhập bằng tài khoản sinh viên
           </p>
+<<<<<<< HEAD
 
           <form id="loginForm" method="POST" class="space-y-5">
              {% if err_msg %}
+=======
+          {% if err_msg %}
+>>>>>>> feature/admin
           <div class="alert alert-danger">
             <h4>{{ err_msg }}</h4>
           </div>
           {% endif %}
+<<<<<<< HEAD
+=======
+          <form id="loginForm" method="POST" class="space-y-5">
+>>>>>>> feature/admin
             <!-- USERNAME -->
             <div>
               <label class="block text-sm font-semibold mb-1">
@@ -135,6 +143,17 @@
                 placeholder="••••••••"
               />
             </div>
+<<<<<<< HEAD
+=======
+
+            <!-- REMEMBER -->
+            <div class="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="remember" />
+
+              <span>Ghi nhớ đăng nhập</span>
+            </div>
+
+>>>>>>> feature/admin
             <!-- BUTTON -->
             <button
               type="submit"
