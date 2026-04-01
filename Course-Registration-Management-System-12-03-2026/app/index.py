@@ -1,95 +1,85 @@
-<<<<<<< HEAD
 from flask import redirect, render_template, request, session, url_for
-=======
-from flask import redirect, render_template, request, url_for
->>>>>>> feature/admin
+
 from app import app
 from app import utils
+from app.admin import admin  # noqa: F401
 
 
-<<<<<<< HEAD
-@app.route("/", methods=['get', 'post'])
+@app.route("/", methods=["GET", "POST"])
 def login():
-    err_msg = ''
-    if request.method == 'POST':
-        student_code = request.form.get('student_code')
-        password = request.form.get('password')
-        remember = request.form.get('remember') == 'on'
+    err_msg = ""
+
+    if request.method == "POST":
+        student_code = request.form.get("student_code")
+        password = request.form.get("password")
+        remember = request.form.get("remember") == "on"
         user = utils.check_login_student(student_code=student_code, password=password)
+
         if user:
             session.permanent = remember
-            session['student_code'] = user.student_code
-            session['student_name'] = user.student.name
-            return redirect(url_for('index'))
-        err_msg = 'MSSV hoặc mật khẩu không chính xác'
+            session["student_code"] = user.student_code
+            session["student_name"] = user.student.name if user.student else ""
+            return redirect(url_for("index"))
+
+        err_msg = "MSSV hoặc mật khẩu không chính xác"
+
     return render_template("login.html", err_msg=err_msg)
 
 
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect(url_for('login'))
+    return redirect(url_for("login"))
 
-=======
-@app.route("/",methods=['get','post'])
-def login():
-    err_msg=''
-    if request.method.__eq__('POST'):
-        student_code=request.form.get('student_code')
-        password=request.form.get('password')
-        user=utils.check_login_student(student_code=student_code,password=password)
-        if user:
-            return redirect(url_for('index'))
-        else:
-            return 'MSSV hoặc mật khẩu không chính xác'
-    return render_template("login.html",err_msg=err_msg)
->>>>>>> feature/admin
 
 @app.route("/forgot-password")
 def forgot_password():
     return render_template("forgot-password.html")
 
-<<<<<<< HEAD
 
-@app.route("/register-course", methods=['POST'])
+@app.route("/register-course", methods=["POST"])
 def register_course():
     student_code = session.get("student_code")
     if not student_code:
-        return redirect(url_for('login'))
+        return redirect(url_for("login"))
 
     class_section_id = request.form.get("class_section_id", type=int)
     success, message = utils.register_section(student_code, class_section_id)
-    return redirect(url_for(
-        'index',
-        course=request.form.get("course"),
-        faculty=request.form.get("faculty"),
-        msg=message,
-        msg_type='success' if success else 'error'
-    ))
+    return redirect(
+        url_for(
+            "index",
+            course=request.form.get("course"),
+            faculty=request.form.get("faculty"),
+            msg=message,
+            msg_type="success" if success else "error",
+        )
+    )
 
 
-@app.route("/cancel-course", methods=['POST'])
+@app.route("/cancel-course", methods=["POST"])
 def cancel_course():
     student_code = session.get("student_code")
     if not student_code:
-        return redirect(url_for('login'))
+        return redirect(url_for("login"))
 
     enrollment_id = request.form.get("enrollment_id", type=int)
     success, message = utils.cancel_registered_course(student_code, enrollment_id)
-    return redirect(url_for(
-        'index',
-        course=request.form.get("course"),
-        faculty=request.form.get("faculty"),
-        msg=message,
-        msg_type='success' if success else 'error'
-    ))
+    return redirect(
+        url_for(
+            "index",
+            course=request.form.get("course"),
+            faculty=request.form.get("faculty"),
+            msg=message,
+            msg_type="success" if success else "error",
+        )
+    )
 
 
 @app.route("/index")
 def index():
     student_code = session.get("student_code")
     if not student_code:
-        return redirect(url_for('login'))
+        return redirect(url_for("login"))
 
     course_id = request.args.get("course")
     faculty_id = request.args.get("faculty")
@@ -115,18 +105,9 @@ def index():
         registered_section_ids=registered_section_ids,
         section_registered_counts=section_registered_counts,
         message=request.args.get("msg", ""),
-        message_type=request.args.get("msg_type", "")
+        message_type=request.args.get("msg_type", ""),
     )
 
 
 if __name__ == "__main__":
-=======
-@app.route("/index")
-def index():
-    return render_template("index.html")
-
-if __name__ == "__main__":
-    from app.admin import *
-
->>>>>>> feature/admin
     app.run(debug=True)
