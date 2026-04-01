@@ -2,7 +2,7 @@ from flask import redirect, render_template, request, session, url_for
 
 from app import app
 from app import utils
-from app.admin import admin  # noqa: F401
+from app.admin import admin
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -87,6 +87,7 @@ def index():
     sections = utils.get_sections(course_id, faculty_id)
     filters = utils.get_filter_data()
     registered_courses = utils.get_registered_courses(student_code, course_id, faculty_id)
+    registered_credits = utils.get_registered_credits(student_code)
     registered_section_ids = [
         enrollment.class_section_id
         for enrollment in registered_courses
@@ -102,6 +103,7 @@ def index():
         student_code=student_code,
         student_name=session.get("student_name"),
         registered_courses=registered_courses,
+        registered_credits=registered_credits,
         registered_section_ids=registered_section_ids,
         section_registered_counts=section_registered_counts,
         message=request.args.get("msg", ""),

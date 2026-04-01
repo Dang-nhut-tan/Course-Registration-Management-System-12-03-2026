@@ -46,6 +46,19 @@ def get_registered_courses(student_code, course_id=None, faculty_id=None):
     return query.all()
 
 
+def get_registered_credits(student_code):
+    enrollments = Enrollment.query.join(
+        ClassSection, Enrollment.class_section_id == ClassSection.id
+    ).join(
+        Course, ClassSection.course_id == Course.id
+    ).filter(
+        Enrollment.student_code == student_code,
+        Enrollment.status == EnrollmentStatus.REGISTERED,
+    ).all()
+
+    return sum(enrollment.class_section.course.credits or 0 for enrollment in enrollments)
+
+
 def get_registered_counts(section_ids):
     if not section_ids:
         return {}
@@ -113,6 +126,11 @@ def register_section(student_code, class_section_id):
 
     if registered_count >= section.max_students:
         return False, "Lớp học phần đã hết chỗ."
+
+    current_credits = get_registered_credits(student_code)
+    section_credits = section.course.credits or 0
+    if current_credits + section_credits > 25:
+        return False, "Tổng số tín chỉ không được vượt quá 25."
 
     if enrollment:
         enrollment.status = EnrollmentStatus.REGISTERED

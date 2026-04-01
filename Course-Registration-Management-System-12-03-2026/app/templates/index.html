@@ -52,6 +52,12 @@
 
     <p class="mb-4">Hiển thị <strong>{{ sections|length }}</strong> kết quả</p>
 
+    <p class="mb-2">Tổng số tín chỉ đã đăng kí: <strong>{{ registered_credits }}</strong>/25
+      {% if registered_credits < 12 %}
+      <span class="text-orange-600 font-semibold">(Chưa đạt tối thiểu 12)</span>
+      {% endif %}
+    </p>
+
     <div class="bg-white shadow rounded-lg overflow-hidden">
       <table class="w-full text-center">
         <thead class="bg-gray-200">
