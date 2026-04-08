@@ -1,10 +1,11 @@
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime, Enum, Time
+#from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime, Enum, Time, Float
 from sqlalchemy.orm import relationship
 from app import app, db
 from enum import Enum as PyEnum
 import hashlib
 from datetime import datetime
+
 
 class BaseModel(db.Model):
     __abstract__ = True
@@ -135,7 +136,14 @@ class ClassSection(BaseModel):
 
     schedules = relationship('Schedule', backref='class_section', lazy=True)
     enrollments = relationship('Enrollment', backref='class_section', lazy=True)
+#======================================================
+class StudentClassSection(db.Model):
+   __tablename__ = 'student_class_sections'
 
+   class_section_id = Column(Integer, ForeignKey('class_sections.id'),primary_key=True)
+   student_code = Column(String(50), ForeignKey('student.student_code'), primary_key=True)
+
+   score_midterm = Column(Float)
 
 class Schedule(BaseModel):
     __tablename__ = 'schedules'
@@ -278,6 +286,14 @@ sample_data = {
       "registration_deadline": "2025-08-25"
     }
   ],
+#============================================
+  "student_class_sections": [
+      {
+        "class_section_id": 1,
+        "student_code": "2354050118",
+        "score_midterm": 8.0
+      }
+  ],
 
   "schedules": [
     {
@@ -409,6 +425,14 @@ def seed_data():
             registration_deadline=datetime.fromisoformat(cs["registration_deadline"])
         ))
     db.session.commit()
+#========================================================
+    for sc in sample_data["student_class_sections"]:
+        db.session.add(StudentClassSection(
+            class_section_id=sc["class_section_id"],
+            student_code=sc["student_code"],
+            score_midterm=sc["score_midterm"]
+        ))
+    db.session.commit()
 
     for s in sample_data["schedules"]:
         db.session.add(Schedule(
@@ -430,6 +454,6 @@ def seed_data():
     db.session.commit()
 
     print(" Seed full data thành công!")
-if __name__ == '__main__':
-    with app.app_context():
-        seed_data()
+    if __name__ == '__main__':
+        with app.app_context():
+            seed_data()

@@ -2,7 +2,6 @@ from flask import redirect, render_template, request, url_for
 from app import app
 from app import utils
 
-
 @app.route("/",methods=['get','post'])
 def login():
     err_msg=''
