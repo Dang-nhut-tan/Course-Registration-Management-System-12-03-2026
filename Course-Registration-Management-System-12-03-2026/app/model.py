@@ -147,7 +147,7 @@ class StudentClassSection(db.Model):
    __tablename__ = 'student_class_sections'
 
    class_section_id = Column(Integer, ForeignKey('class_sections.id'),primary_key=True)
-   student_code = Column(String(50), ForeignKey('student.student_code'), primary_key=True)
+   student_code = Column(String(50), ForeignKey('students.student_code'), primary_key=True)
 
    score_midterm = Column(Float)
 
@@ -185,6 +185,7 @@ sample_data = {
     "students": [
         {"student_code": "2354050113", "name": "Nguyen Van A", "birth_year": 2003, "major_id": 1},
         {"student_code": "2354050114", "name": "Tran Thi B", "birth_year": 2003, "major_id": 3},
+        {"student_code": "2354050118", "name": "Nguyen Thi D", "birth_year": 2002, "major_id": 1},
         {"student_code": "2354050115", "name": "Le Van C", "birth_year": 2002, "major_id": 4},
     ],
     "users": [
@@ -192,6 +193,7 @@ sample_data = {
         {"id": 2, "student_code": "2354050113", "password": "123456", "role": "student"},
         {"id": 3, "student_code": "2354050114", "password": "123456", "role": "student"},
         {"id": 4, "student_code": "2354050115", "password": "123456", "role": "student"},
+        {"id": 5, "student_code": "2354050118", "password": "123456", "role": "student"},
     ],
     "courses": [
         {"id": 1, "name": "Kiểm thử phần mềm", "credits": 3, "faculty_id": 1, "is_shared": False},
@@ -482,6 +484,7 @@ def seed_data():
 
 
     print(" Seed full data thành công!")
-    if __name__ == '__main__':
-        with app.app_context():
-            seed_data()
+
+if __name__ == '__main__':
+    with app.app_context():
+        seed_data()
