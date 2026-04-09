@@ -1,6 +1,7 @@
 import hashlib
 from app import app, db
 from flask_login import LoginManager
+from datetime import datetime, timedelta
 from app.model import (
     ClassSection,
     Course,
@@ -10,6 +11,7 @@ from app.model import (
     EnrollmentStatus,
     Faculty,
     User,
+    StudentClassSection
 )
 
 def check_login_student(student_code, password):
@@ -164,14 +166,30 @@ def register_section(student_code, class_section_id):
 def cancel_registered_course(student_code, enrollment_id):
     enrollment = Enrollment.query.filter(
         Enrollment.id == enrollment_id,
-        Enrollment.student_code == student_code,
+        #Enrollment.student_code == student_code,
     ).first()
 
     if not enrollment:
         return False, "Không tìm thấy môn đã đăng ký."
 
+    if enrollment.student_code != student_code:
+        return False, "Bạn không có quyền hủy môn học cua sinh viên khác."
+
     if enrollment.status == EnrollmentStatus.CANCELED:
         return False, "Môn học này đã được hủy trước đó."
+
+    start_date = enrollment.class_section.start_date
+    cancel_limit = start_date + timedelta(weeks=2)
+    if datetime.now() > cancel_limit:
+        return False, "Đã quá hạn hủy môn."
+
+    info = StudentClassSection.query.filter(
+        StudentClassSection.student_code == enrollment.student_code,
+        StudentClassSection.class_section_id == enrollment.class_section_id
+    ).first()
+
+    if info and info.score_midterm is not None:
+        return False, "Không thể hủy vì đã có điểm giữa kỳ."
 
     enrollment.status = EnrollmentStatus.CANCELED
     db.session.commit()
