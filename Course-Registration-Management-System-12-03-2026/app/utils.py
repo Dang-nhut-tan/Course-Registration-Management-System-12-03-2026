@@ -1,15 +1,7 @@
 import hashlib
 
 from app import db
-from app.model import (
-    ClassSection,
-    Course,
-    CoursePrerequisite,
-    Enrollment,
-    EnrollmentStatus,
-    Faculty,
-    User,
-)
+from app.model import ClassSection,Course, CourseMajor,CoursePrerequisite,Enrollment,EnrollmentStatus,Faculty, Student,User
 
 
 def check_login_student(student_code, password):
@@ -106,6 +98,8 @@ def register_section(student_code, class_section_id):
     section = ClassSection.query.get(class_section_id)
     if not section:
         return False, "Không tìm thấy lớp học phần."
+    if not is_course_allowed(student_code,section.course):
+        return False, "Môn học không thuộc ngành của bạn "
 
     is_valid, missing_courses = check_prerequisite_courses(student_code, section.course_id)
     if not is_valid:
@@ -161,6 +155,16 @@ def cancel_registered_course(student_code, enrollment_id):
     enrollment.status = EnrollmentStatus.CANCELED
     db.session.commit()
     return True, "Hủy môn học thành công."
+
+def is_course_allowed(student_code, course):
+    student = Student.query.filter_by(student_code=student_code).first()
+    major_id=student.major_id
+    if course.is_shared:
+        return True;
+    return CourseMajor.query.filter_by(
+        course_id=course.id,
+        major_id=major_id
+    ).first() is not None
 
 
 def get_filter_data():
