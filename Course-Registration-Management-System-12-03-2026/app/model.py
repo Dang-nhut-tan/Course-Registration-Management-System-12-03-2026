@@ -3,10 +3,11 @@ from datetime import datetime
 from enum import Enum as PyEnum
 
 from flask_login import UserMixin
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Time
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Time, Float
 from sqlalchemy.orm import relationship
 
 from app import app, db
+
 
 
 class BaseModel(db.Model):
@@ -141,6 +142,14 @@ class ClassSection(BaseModel):
     schedules = relationship("Schedule", backref="class_section", lazy=True)
     enrollments = relationship("Enrollment", backref="class_section", lazy=True)
 
+#======================================================
+class StudentClassSection(db.Model):
+   __tablename__ = 'student_class_sections'
+
+   class_section_id = Column(Integer, ForeignKey('class_sections.id'),primary_key=True)
+   student_code = Column(String(50), ForeignKey('students.student_code'), primary_key=True)
+
+   score_midterm = Column(Float)
 
 class Schedule(BaseModel):
     __tablename__ = "schedules"
@@ -176,6 +185,7 @@ sample_data = {
     "students": [
         {"student_code": "2354050113", "name": "Nguyen Van A", "birth_year": 2003, "major_id": 1},
         {"student_code": "2354050114", "name": "Tran Thi B", "birth_year": 2003, "major_id": 3},
+        {"student_code": "2354050118", "name": "Nguyen Thi D", "birth_year": 2002, "major_id": 1},
         {"student_code": "2354050115", "name": "Le Van C", "birth_year": 2002, "major_id": 4},
     ],
     "users": [
@@ -183,6 +193,7 @@ sample_data = {
         {"id": 2, "student_code": "2354050113", "password": "123456", "role": "student"},
         {"id": 3, "student_code": "2354050114", "password": "123456", "role": "student"},
         {"id": 4, "student_code": "2354050115", "password": "123456", "role": "student"},
+        {"id": 5, "student_code": "2354050118", "password": "123456", "role": "student"},
     ],
     "courses": [
         {"id": 1, "name": "Kiểm thử phần mềm", "credits": 3, "faculty_id": 1, "is_shared": False},
@@ -317,6 +328,14 @@ sample_data = {
             "registration_deadline": "2025-08-25",
         },
     ],
+#============================================
+    "student_class_sections": [
+      {
+        "class_section_id": 1,
+        "student_code": "2354050118",
+        "score_midterm": 8.0
+      }
+  ],
     "schedules": [
         {"id": 1, "class_section_id": 1, "day_of_week": 2, "start_time": "07:00", "end_time": "11:30"},
         {"id": 2, "class_section_id": 2, "day_of_week": 3, "start_time": "07:00", "end_time": "11:30"},
@@ -431,6 +450,14 @@ def seed_data():
             )
         )
     db.session.commit()
+#========================================================
+    for sc in sample_data["student_class_sections"]:
+        db.session.add(StudentClassSection(
+            class_section_id=sc["class_section_id"],
+            student_code=sc["student_code"],
+            score_midterm=sc["score_midterm"]
+        ))
+    db.session.commit()
 
     for schedule in sample_data["schedules"]:
         db.session.add(
@@ -455,9 +482,9 @@ def seed_data():
         )
     db.session.commit()
 
-    print("Seed full data thành công!")
 
+    print(" Seed full data thành công!")
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     with app.app_context():
         seed_data()

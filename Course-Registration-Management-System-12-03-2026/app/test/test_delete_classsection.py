@@ -1,32 +1,9 @@
-from flask import Flask
 from app import db
 import pytest
 from app.model import ClassSection, Enrollment
 from app.admin import ClassSectionView
+from app.test.test_base import test_app, test_session
 
-def create_app():
-    app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
-
-    app.config["SECRET_KEY"]= "4365ur76ifkyfvfytidyfyj"
-
-    db.init_app(app)
-
-    return app
-
-@pytest.fixture
-def test_app():
-    app = create_app()
-
-    with app.app_context():
-        db.create_all()
-        yield app
-        db.drop_all()
-
-@pytest.fixture
-def test_session(test_app):
-    yield db.session
-    db.session.rollback()
 
 @pytest.fixture
 def test_admin():
