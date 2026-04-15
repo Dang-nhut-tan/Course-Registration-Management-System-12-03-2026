@@ -1,4 +1,5 @@
 import hashlib
+
 from app import app, db
 from flask_login import LoginManager
 from datetime import datetime, timedelta
@@ -123,6 +124,8 @@ def register_section(student_code, class_section_id):
     section = ClassSection.query.get(class_section_id)
     if not section:
         return False, "Không tìm thấy lớp học phần."
+    if not is_course_allowed(student_code,section.course):
+        return False, "Môn học không thuộc ngành của bạn "
 
     is_valid, missing_courses = check_prerequisite_courses(student_code, section.course_id)
     if not is_valid:
@@ -194,6 +197,16 @@ def cancel_registered_course(student_code, enrollment_id):
     enrollment.status = EnrollmentStatus.CANCELED
     db.session.commit()
     return True, "Hủy môn học thành công."
+
+def is_course_allowed(student_code, course):
+    student = Student.query.filter_by(student_code=student_code).first()
+    major_id=student.major_id
+    if course.is_shared:
+        return True;
+    return CourseMajor.query.filter_by(
+        course_id=course.id,
+        major_id=major_id
+    ).first() is not None
 
 
 def get_filter_data():
