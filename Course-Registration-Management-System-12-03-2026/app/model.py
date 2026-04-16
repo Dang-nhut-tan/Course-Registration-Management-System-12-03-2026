@@ -1,13 +1,15 @@
-import hashlib
-from datetime import datetime
+import os
+import sys
 from enum import Enum as PyEnum
 
+if __package__ in (None, ""):
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from flask_login import UserMixin
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Time, Float
+from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Time, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app import app, db
-
 
 
 class BaseModel(db.Model):
@@ -27,6 +29,11 @@ class UserRole(PyEnum):
 class EnrollmentStatus(PyEnum):
     REGISTERED = "registered"
     CANCELED = "canceled"
+
+
+class ClassSectionType(PyEnum):
+    THEORY = "theory"
+    PRACTICE = "practice"
 
 
 class User(BaseModel, UserMixin):
@@ -71,6 +78,48 @@ class Major(BaseModel):
 
     name = Column(String(255))
     faculty_id = Column(Integer, ForeignKey("faculties.id"), nullable=False)
+
+
+class StudentClass(BaseModel):
+    __tablename__ = "student_classes"
+
+    code = Column(String(50), unique=True, nullable=False)
+    name = Column(String(255))
+    school_year = Column(String(20))
+    major_id = Column(Integer, ForeignKey("majors.id"), nullable=False)
+
+    major = relationship("Major", backref="student_classes")
+
+
+class TrainingProgram(BaseModel):
+    __tablename__ = "training_programs"
+    __table_args__ = (
+        UniqueConstraint("major_id", "school_year", name="uq_training_program_major_year"),
+    )
+
+    name = Column(String(255), nullable=False)
+    major_id = Column(Integer, ForeignKey("majors.id"), nullable=False)
+    school_year = Column(String(20), nullable=False)
+    max_credits_per_semester = Column(Integer, nullable=False, default=25)
+
+    major = relationship("Major", backref="training_programs")
+    training_program_courses = relationship(
+        "TrainingProgramCourse",
+        back_populates="training_program",
+        cascade="all, delete-orphan",
+        lazy=True,
+    )
+
+
+class TrainingProgramCourse(db.Model):
+    __tablename__ = "training_program_course"
+
+    training_program_id = Column(Integer, ForeignKey("training_programs.id"), primary_key=True)
+    course_id = Column(Integer, ForeignKey("courses.id"), primary_key=True)
+    semester_no = Column(Integer, nullable=False, default=1)
+
+    training_program = relationship("TrainingProgram", back_populates="training_program_courses")
+    course = relationship("Course")
 
 
 class Course(BaseModel):
@@ -119,17 +168,23 @@ class Student(db.Model):
     hometown = Column(String(255))
     religion = Column(String(100))
     identity_number = Column(String(50), unique=True)
-    major_id = Column(Integer, ForeignKey("majors.id"), nullable=False)
+    major_id = Column(Integer, ForeignKey("majors.id"), nullable=True)
+    class_id = Column(Integer, ForeignKey("student_classes.id"), nullable=True)
+
+    student_class = relationship("StudentClass", backref="students")
 
 
 class ClassSection(BaseModel):
     __tablename__ = "class_sections"
 
+    name = Column(String(255))
     course_id = Column(Integer, ForeignKey("courses.id"))
+    student_class_id = Column(Integer, ForeignKey("student_classes.id"), nullable=True)
     teacher_id = Column(Integer, ForeignKey("teachers.id"))
     room_id = Column(Integer, ForeignKey("rooms.id"))
 
     course = relationship("Course")
+    student_class = relationship("StudentClass")
     teacher = relationship("Teacher")
     room = relationship("Room")
 
@@ -138,18 +193,21 @@ class ClassSection(BaseModel):
     start_date = Column(DateTime)
     end_date = Column(DateTime)
     registration_deadline = Column(DateTime)
+    section_type = Column(Enum(ClassSectionType), default=ClassSectionType.THEORY, nullable=False)
+    linked_section_id = Column(Integer, ForeignKey("class_sections.id"))
 
     schedules = relationship("Schedule", backref="class_section", lazy=True)
     enrollments = relationship("Enrollment", backref="class_section", lazy=True)
+    linked_section = relationship("ClassSection", remote_side="ClassSection.id", uselist=False)
 
-#======================================================
+
 class StudentClassSection(db.Model):
-   __tablename__ = 'student_class_sections'
+    __tablename__ = "student_class_sections"
 
-   class_section_id = Column(Integer, ForeignKey('class_sections.id'),primary_key=True)
-   student_code = Column(String(50), ForeignKey('students.student_code'), primary_key=True)
+    class_section_id = Column(Integer, ForeignKey("class_sections.id"), primary_key=True)
+    student_code = Column(String(50), ForeignKey("students.student_code"), primary_key=True)
+    score_midterm = Column(Float)
 
-   score_midterm = Column(Float)
 
 class Schedule(BaseModel):
     __tablename__ = "schedules"
@@ -166,325 +224,25 @@ class Enrollment(BaseModel):
     student_code = Column(String(50), ForeignKey("students.student_code"))
     class_section_id = Column(Integer, ForeignKey("class_sections.id"))
     status = Column(Enum(EnrollmentStatus))
+    registered_at = Column(DateTime, nullable=True)
 
     student = relationship("Student", backref="enrollments")
 
 
-sample_data = {
-    "faculties": [
-        {"id": 1, "name": "CNTT"},
-        {"id": 2, "name": "Kinh tế"},
-        {"id": 3, "name": "Quản trị kinh doanh"},
-    ],
-    "majors": [
-        {"id": 1, "name": "HTTQL", "faculty_id": 1},
-        {"id": 2, "name": "Khoa học máy tính", "faculty_id": 1},
-        {"id": 3, "name": "Tài chính - Ngân hàng", "faculty_id": 2},
-        {"id": 4, "name": "Marketing", "faculty_id": 3},
-    ],
-    "students": [
-        {"student_code": "2354050113", "name": "Nguyen Van A", "birth_year": 2003, "major_id": 1},
-        {"student_code": "2354050114", "name": "Tran Thi B", "birth_year": 2003, "major_id": 3},
-        {"student_code": "2354050118", "name": "Nguyen Thi D", "birth_year": 2002, "major_id": 1},
-        {"student_code": "2354050115", "name": "Le Van C", "birth_year": 2002, "major_id": 4},
-    ],
-    "users": [
-        {"id": 1, "username": "admin", "password": "admin123", "role": "admin"},
-        {"id": 2, "student_code": "2354050113", "password": "123456", "role": "student"},
-        {"id": 3, "student_code": "2354050114", "password": "123456", "role": "student"},
-        {"id": 4, "student_code": "2354050115", "password": "123456", "role": "student"},
-        {"id": 5, "student_code": "2354050118", "password": "123456", "role": "student"},
-    ],
-    "courses": [
-        {"id": 1, "name": "Kiểm thử phần mềm", "credits": 3, "faculty_id": 1, "is_shared": False},
-        {"id": 2, "name": "Cấu trúc dữ liệu và giải thuật", "credits": 4, "faculty_id": 1, "is_shared": False},
-        {"id": 3, "name": "Cơ sở dữ liệu", "credits": 3, "faculty_id": 1, "is_shared": False},
-        {"id": 4, "name": "Phân tích thiết kế hệ thống", "credits": 3, "faculty_id": 1, "is_shared": False},
-        {"id": 5, "name": "Lap trinh Web", "credits": 4, "faculty_id": 1, "is_shared": False},
-        {"id": 6, "name": "Mạng máy tính", "credits": 3, "faculty_id": 1, "is_shared": False},
-        {"id": 7, "name": "Nguyên lý kế toán", "credits": 3, "faculty_id": 2, "is_shared": False},
-        {"id": 8, "name": "Tài chính doanh nghiệp", "credits": 3, "faculty_id": 2, "is_shared": False},
-        {"id": 9, "name": "Marketing căn bản", "credits": 3, "faculty_id": 3, "is_shared": False},
-        {"id": 10, "name": "Tin học đại cương", "credits": 2, "faculty_id": 1, "is_shared": True},
-    ],
-    "course_prerequisites": [
-        {"course_id": 2, "prerequisite_id": 1},
-        {"course_id": 4, "prerequisite_id": 3},
-        {"course_id": 8, "prerequisite_id": 7},
-    ],
-    "teachers": [
-        {"id": 1, "name": "Thầy B", "faculty_id": 1},
-        {"id": 2, "name": "Cô C", "faculty_id": 1},
-        {"id": 3, "name": "Thầy D", "faculty_id": 1},
-        {"id": 4, "name": "Thầy K", "faculty_id": 2},
-        {"id": 5, "name": "Cô M", "faculty_id": 3},
-    ],
-    "rooms": [
-        {"id": 1, "name": "A101", "capacity": 50, "campus_id": 1},
-        {"id": 2, "name": "A102", "capacity": 45, "campus_id": 1},
-        {"id": 3, "name": "B201", "capacity": 50, "campus_id": 1},
-    ],
-    "campuses": [
-        {"id": 1, "name": "Cơ sở 1", "address": "TPHCM"},
-    ],
-    "class_sections": [
-        {
-            "id": 1,
-            "course_id": 1,
-            "teacher_id": 1,
-            "room_id": 1,
-            "semester": "2025-1",
-            "max_students": 50,
-            "start_date": "2025-09-01",
-            "end_date": "2025-12-01",
-            "registration_deadline": "2025-08-25",
-        },
-        {
-            "id": 2,
-            "course_id": 2,
-            "teacher_id": 2,
-            "room_id": 2,
-            "semester": "2025-1",
-            "max_students": 45,
-            "start_date": "2025-09-03",
-            "end_date": "2025-12-05",
-            "registration_deadline": "2025-08-25",
-        },
-        {
-            "id": 3,
-            "course_id": 3,
-            "teacher_id": 1,
-            "room_id": 3,
-            "semester": "2025-1",
-            "max_students": 60,
-            "start_date": "2025-09-04",
-            "end_date": "2025-12-10",
-            "registration_deadline": "2025-08-25",
-        },
-        {
-            "id": 4,
-            "course_id": 4,
-            "teacher_id": 3,
-            "room_id": 1,
-            "semester": "2025-1",
-            "max_students": 40,
-            "start_date": "2025-09-05",
-            "end_date": "2025-12-12",
-            "registration_deadline": "2025-08-25",
-        },
-        {
-            "id": 5,
-            "course_id": 5,
-            "teacher_id": 2,
-            "room_id": 2,
-            "semester": "2025-1",
-            "max_students": 35,
-            "start_date": "2025-09-06",
-            "end_date": "2025-12-15",
-            "registration_deadline": "2025-08-25",
-        },
-        {
-            "id": 6,
-            "course_id": 6,
-            "teacher_id": 3,
-            "room_id": 3,
-            "semester": "2025-1",
-            "max_students": 55,
-            "start_date": "2025-09-07",
-            "end_date": "2025-12-18",
-            "registration_deadline": "2025-08-25",
-        },
-        {
-            "id": 7,
-            "course_id": 7,
-            "teacher_id": 4,
-            "room_id": 1,
-            "semester": "2025-1",
-            "max_students": 50,
-            "start_date": "2025-09-08",
-            "end_date": "2025-12-19",
-            "registration_deadline": "2025-08-25",
-        },
-        {
-            "id": 8,
-            "course_id": 8,
-            "teacher_id": 4,
-            "room_id": 2,
-            "semester": "2025-1",
-            "max_students": 45,
-            "start_date": "2025-09-09",
-            "end_date": "2025-12-20",
-            "registration_deadline": "2025-08-25",
-        },
-        {
-            "id": 9,
-            "course_id": 9,
-            "teacher_id": 5,
-            "room_id": 3,
-            "semester": "2025-1",
-            "max_students": 40,
-            "start_date": "2025-09-10",
-            "end_date": "2025-12-21",
-            "registration_deadline": "2025-08-25",
-        },
-    ],
-#============================================
-    "student_class_sections": [
-      {
-        "class_section_id": 1,
-        "student_code": "2354050118",
-        "score_midterm": 8.0
-      }
-  ],
-    "schedules": [
-        {"id": 1, "class_section_id": 1, "day_of_week": 2, "start_time": "07:00", "end_time": "11:30"},
-        {"id": 2, "class_section_id": 2, "day_of_week": 3, "start_time": "07:00", "end_time": "11:30"},
-        {"id": 3, "class_section_id": 3, "day_of_week": 4, "start_time": "13:00", "end_time": "17:30"},
-        {"id": 4, "class_section_id": 4, "day_of_week": 5, "start_time": "07:00", "end_time": "11:30"},
-        {"id": 5, "class_section_id": 5, "day_of_week": 6, "start_time": "13:00", "end_time": "17:30"},
-        {"id": 6, "class_section_id": 6, "day_of_week": 7, "start_time": "07:00", "end_time": "11:30"},
-        {"id": 7, "class_section_id": 7, "day_of_week": 2, "start_time": "13:00", "end_time": "17:30"},
-        {"id": 8, "class_section_id": 8, "day_of_week": 4, "start_time": "07:00", "end_time": "11:30"},
-        {"id": 9, "class_section_id": 9, "day_of_week": 6, "start_time": "13:00", "end_time": "17:30"},
-    ],
-    "enrollments": [
-        {"id": 1, "student_code": "2354050113", "class_section_id": 1, "status": "registered"},
-        {"id": 2, "student_code": "2354050113", "class_section_id": 3, "status": "registered"},
-        {"id": 3, "student_code": "2354050113", "class_section_id": 5, "status": "canceled"},
-        {"id": 4, "student_code": "2354050114", "class_section_id": 7, "status": "registered"},
-        {"id": 5, "student_code": "2354050115", "class_section_id": 9, "status": "registered"},
-    ],
-}
+def get_sample_data():
+    from app.seed_data import sample_data
+
+    return sample_data
 
 
 def seed_data():
-    db.drop_all()
-    db.create_all()
+    from app.seed_data import seed_data as run_seed_data
 
-    for faculty in sample_data["faculties"]:
-        db.session.add(Faculty(id=faculty["id"], name=faculty["name"]))
-    db.session.commit()
-
-    for major in sample_data["majors"]:
-        db.session.add(Major(id=major["id"], name=major["name"], faculty_id=major["faculty_id"]))
-    db.session.commit()
-
-    for student in sample_data["students"]:
-        db.session.add(
-            Student(
-                student_code=student["student_code"],
-                name=student["name"],
-                birth_year=student["birth_year"],
-                major_id=student["major_id"],
-            )
-        )
-    db.session.commit()
-
-    for user_data in sample_data["users"]:
-        role = UserRole(user_data["role"])
-        user = User(
-            id=user_data["id"],
-            username=user_data.get("username"),
-            password=hashlib.md5(user_data["password"].strip().encode("utf-8")).hexdigest(),
-            role=role,
-        )
-
-        if role == UserRole.STUDENT:
-            user.student_code = user_data["student_code"]
-
-        db.session.add(user)
-    db.session.commit()
-
-    for campus in sample_data["campuses"]:
-        db.session.add(Campus(id=campus["id"], name=campus["name"], address=campus["address"]))
-    db.session.commit()
-
-    for room in sample_data["rooms"]:
-        db.session.add(
-            Room(
-                id=room["id"],
-                name=room["name"],
-                capacity=room["capacity"],
-                campus_id=room["campus_id"],
-            )
-        )
-    db.session.commit()
-
-    for course in sample_data["courses"]:
-        db.session.add(
-            Course(
-                id=course["id"],
-                name=course["name"],
-                credits=course["credits"],
-                faculty_id=course["faculty_id"],
-                is_shared=course.get("is_shared", False),
-            )
-        )
-    db.session.commit()
-
-    for prerequisite in sample_data.get("course_prerequisites", []):
-        db.session.add(
-            CoursePrerequisite(
-                course_id=prerequisite["course_id"],
-                prerequisite_id=prerequisite["prerequisite_id"],
-            )
-        )
-    db.session.commit()
-
-    for teacher in sample_data["teachers"]:
-        db.session.add(Teacher(id=teacher["id"], name=teacher["name"], faculty_id=teacher["faculty_id"]))
-    db.session.commit()
-
-    for class_section in sample_data["class_sections"]:
-        db.session.add(
-            ClassSection(
-                id=class_section["id"],
-                course_id=class_section["course_id"],
-                teacher_id=class_section["teacher_id"],
-                room_id=class_section["room_id"],
-                semester=class_section["semester"],
-                max_students=class_section["max_students"],
-                start_date=datetime.fromisoformat(class_section["start_date"]),
-                end_date=datetime.fromisoformat(class_section["end_date"]),
-                registration_deadline=datetime.fromisoformat(class_section["registration_deadline"]),
-            )
-        )
-    db.session.commit()
-#========================================================
-    for sc in sample_data["student_class_sections"]:
-        db.session.add(StudentClassSection(
-            class_section_id=sc["class_section_id"],
-            student_code=sc["student_code"],
-            score_midterm=sc["score_midterm"]
-        ))
-    db.session.commit()
-
-    for schedule in sample_data["schedules"]:
-        db.session.add(
-            Schedule(
-                id=schedule["id"],
-                class_section_id=schedule["class_section_id"],
-                day_of_week=schedule["day_of_week"],
-                start_time=datetime.strptime(schedule["start_time"], "%H:%M").time(),
-                end_time=datetime.strptime(schedule["end_time"], "%H:%M").time(),
-            )
-        )
-    db.session.commit()
-
-    for enrollment in sample_data["enrollments"]:
-        db.session.add(
-            Enrollment(
-                id=enrollment["id"],
-                student_code=enrollment["student_code"],
-                class_section_id=enrollment["class_section_id"],
-                status=EnrollmentStatus(enrollment["status"]),
-            )
-        )
-    db.session.commit()
+    return run_seed_data()
 
 
-    print(" Seed full data thành công!")
+if __name__ == "__main__":
+    sys.modules.setdefault("app.model", sys.modules[__name__])
 
-if __name__ == '__main__':
     with app.app_context():
         seed_data()
