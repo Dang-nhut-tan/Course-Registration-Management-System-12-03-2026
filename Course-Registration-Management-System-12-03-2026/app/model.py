@@ -2,12 +2,14 @@ import os
 import sys
 from enum import Enum as PyEnum
 
-from flask_login import UserMixin
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Time, UniqueConstraint
-from sqlalchemy.orm import relationship
-from app import app
+if __package__ in (None, ""):
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app import db
+from flask_login import UserMixin
+from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Time, UniqueConstraint
+from sqlalchemy.orm import relationship
+
+from app import app, db
 
 
 class BaseModel(db.Model):
@@ -199,6 +201,14 @@ class ClassSection(BaseModel):
     linked_section = relationship("ClassSection", remote_side="ClassSection.id", uselist=False)
 
 
+class StudentClassSection(db.Model):
+    __tablename__ = "student_class_sections"
+
+    class_section_id = Column(Integer, ForeignKey("class_sections.id"), primary_key=True)
+    student_code = Column(String(50), ForeignKey("students.student_code"), primary_key=True)
+    score_midterm = Column(Float)
+
+
 class Schedule(BaseModel):
     __tablename__ = "schedules"
 
@@ -232,8 +242,6 @@ def seed_data():
 
 
 if __name__ == "__main__":
-
-
     sys.modules.setdefault("app.model", sys.modules[__name__])
 
     with app.app_context():

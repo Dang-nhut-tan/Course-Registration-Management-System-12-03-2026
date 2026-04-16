@@ -1,9 +1,9 @@
 import hashlib
 
-from app import db
-from datetime import datetime
-from app.model import ClassSection, ClassSectionType,Course, CourseMajor,CoursePrerequisite,Enrollment,EnrollmentStatus,Faculty, Student, TrainingProgram, TrainingProgramCourse,User
-
+from app import app, db
+from flask_login import LoginManager
+from datetime import datetime, timedelta
+from app.model import ClassSection, ClassSectionType, Course, CourseMajor, CoursePrerequisite, Enrollment, EnrollmentStatus, Faculty, Major, Schedule, Student, StudentClassSection, TrainingProgram, TrainingProgramCourse, User
 
 def check_login_student(student_code, password):
     if student_code and password:
@@ -13,8 +13,23 @@ def check_login_student(student_code, password):
             User.student_code == student_code.strip(),
         ).first()
 
-    return None
+login_manager = LoginManager()
+login_manager.init_app(app)
 
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+def check_room_conflict(day, start_time, end_time, room_id):
+    query = db.session.query(Schedule).join(ClassSection).filter(
+        Schedule.day_of_week==day,
+        Schedule.start_time < end_time,
+        Schedule.end_time > start_time,
+        ClassSection.room_id == room_id
+    )
+    if query.first():
+        return True
+    return False
 
 def get_student_context(student_code):
     student = Student.query.filter_by(student_code=student_code).first()
@@ -100,7 +115,7 @@ def get_allowed_course_ids(student_code, training_program_semester=None):
             query = query.filter(TrainingProgramCourse.semester_no == int(training_program_semester))
         return [item.course_id for item in query.all()]
 
-    _, _, major_id = get_student_context(student_code)
+    student_id, class_id, major_id = get_student_context(student_code)
     if major_id is None:
         return []
 
@@ -233,7 +248,7 @@ def get_registered_counts(section_ids):
 
     enrollments = Enrollment.query.filter(
         Enrollment.class_section_id.in_(section_ids),
-        Enrollment.status == EnrollmentStatus.REGISTERED,
+        Enrollment.status == EnrollmentStatus.REGISTERED
     ).all()
 
     counts = {}
@@ -298,7 +313,7 @@ def get_schedule_conflict(student_code, candidate_sections):
         Enrollment, Enrollment.class_section_id == ClassSection.id
     ).filter(
         Enrollment.student_code == student_code,
-        Enrollment.status == EnrollmentStatus.REGISTERED,
+        Enrollment.status == EnrollmentStatus.REGISTERED
     ).all()
 
     for candidate_section in candidate_sections:
@@ -313,7 +328,7 @@ def get_schedule_conflict(student_code, candidate_sections):
                             registered_section,
                             candidate_schedule.day_of_week,
                             candidate_schedule.start_time,
-                            candidate_schedule.end_time,
+                            candidate_schedule.end_time
                         )
 
     return None
@@ -442,14 +457,30 @@ def register_section(student_code, class_section_id):
 def cancel_registered_course(student_code, enrollment_id):
     enrollment = Enrollment.query.filter(
         Enrollment.id == enrollment_id,
-        Enrollment.student_code == student_code,
+        #Enrollment.student_code == student_code,
     ).first()
 
     if not enrollment:
         return False, "Không tìm thấy môn đã đăng ký."
 
+    if enrollment.student_code != student_code:
+        return False, "Bạn không có quyền hủy môn học cua sinh viên khác."
+
     if enrollment.status == EnrollmentStatus.CANCELED:
         return False, "Môn học này đã được hủy trước đó."
+
+    start_date = enrollment.class_section.start_date
+    cancel_limit = start_date + timedelta(weeks=2)
+    if datetime.now() > cancel_limit:
+        return False, "Đã quá hạn hủy môn."
+
+    info = StudentClassSection.query.filter(
+        StudentClassSection.student_code == enrollment.student_code,
+        StudentClassSection.class_section_id == enrollment.class_section_id
+    ).first()
+
+    if info and info.score_midterm is not None:
+        return False, "Không thể hủy vì đã có điểm giữa kỳ."
 
     enrollment.status = EnrollmentStatus.CANCELED
 
