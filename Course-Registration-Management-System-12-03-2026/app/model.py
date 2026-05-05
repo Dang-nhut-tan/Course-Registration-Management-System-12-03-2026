@@ -109,7 +109,6 @@ class TrainingProgram(BaseModel):
         lazy=True,
     )
 
-
 class TrainingProgramCourse(db.Model):
     __tablename__ = "training_program_course"
 
@@ -119,48 +118,6 @@ class TrainingProgramCourse(db.Model):
 
     training_program = relationship("TrainingProgram", back_populates="training_program_courses")
     course = relationship("Course")
-
-class StudentClass(BaseModel):
-    __tablename__ = "student_classes"
-
-    code = Column(String(50), unique=True, nullable=False)
-    name = Column(String(255))
-    school_year = Column(String(20))
-    major_id = Column(Integer, ForeignKey("majors.id"), nullable=False)
-
-    major = relationship("Major", backref="student_classes")
-
-
-class TrainingProgram(BaseModel):
-    __tablename__ = "training_programs"
-    __table_args__ = (
-        UniqueConstraint("major_id", "school_year", name="uq_training_program_major_year"),
-    )
-
-    name = Column(String(255), nullable=False)
-    major_id = Column(Integer, ForeignKey("majors.id"), nullable=False)
-    school_year = Column(String(20), nullable=False)
-    max_credits_per_semester = Column(Integer, nullable=False, default=25)
-
-    major = relationship("Major", backref="training_programs")
-    training_program_courses = relationship(
-        "TrainingProgramCourse",
-        back_populates="training_program",
-        cascade="all, delete-orphan",
-        lazy=True,
-    )
-
-
-class TrainingProgramCourse(db.Model):
-    __tablename__ = "training_program_course"
-
-    training_program_id = Column(Integer, ForeignKey("training_programs.id"), primary_key=True)
-    course_id = Column(Integer, ForeignKey("courses.id"), primary_key=True)
-    semester_no = Column(Integer, nullable=False, default=1)
-
-    training_program = relationship("TrainingProgram", back_populates="training_program_courses")
-    course = relationship("Course")
-
 
 class Course(BaseModel):
     __tablename__ = "courses"
