@@ -7,7 +7,7 @@ from app import app, db
 #from index import app
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
-from app.model import Course, ClassSection, Enrollment, Schedule, Room
+from app.model import Course, ClassSection, Enrollment, Schedule, Room, UserRole, Campus, Teacher, CoursePrerequisite
 from app.utils import check_room_conflict
 
 admin = Admin(app=app, name="Course Registration Administration")
@@ -23,7 +23,7 @@ class ClassSectionView(ModelView):
         return  super(ClassSectionView, self).delete_model(model)
 
     def create_model(self, form):
-        if not current_user.is_authenticated or current_user.role != 'admin':
+        if not current_user.is_authenticated or current_user.role != UserRole.ADMIN:
             flash(message="Chỉ Admin mới được phép tạo lớp học!",category="error")
             return False
 
@@ -47,7 +47,10 @@ class ScheduleView(ModelView):
 
         return super(ScheduleView, self).create_model(form)
 
-
 admin.add_view(ModelView(Course, db.session))
 admin.add_view(ClassSectionView(ClassSection, db.session))
 admin.add_view(ScheduleView(Schedule, db.session))
+admin.add_view(ModelView(Room, db.session))
+admin.add_view(ModelView(Teacher, db.session))
+admin.add_view(ModelView(CoursePrerequisite, db.session))
+admin.add_view(ModelView(Campus, db.session))
