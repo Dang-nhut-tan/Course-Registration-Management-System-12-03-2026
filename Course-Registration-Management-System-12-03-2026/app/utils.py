@@ -5,6 +5,8 @@ from flask_login import LoginManager
 from datetime import datetime, timedelta
 from app.model import ClassSection, ClassSectionType, Course, CourseMajor, CoursePrerequisite, Enrollment, EnrollmentStatus, Faculty, Major, Schedule, Student, StudentClassSection, TrainingProgram, TrainingProgramCourse, User
 
+MIN_CREDITS_PER_SEMESTER = 12
+
 def check_login_student(student_code, password):
     if student_code and password:
         password = hashlib.md5(password.strip().encode("utf-8")).hexdigest()
@@ -76,7 +78,7 @@ def get_default_training_program_semester(student_code):
     if not semesters:
         return None
 
-    student, _, _ = get_student_context(student_code)
+    student, student_class_code, major_id = get_student_context(student_code)
     if not student or not student.student_class or not student.student_class.school_year:
         return semesters[0]
 
@@ -131,7 +133,7 @@ def get_allowed_course_ids(student_code, training_program_semester=None):
 
 
 def get_student_faculty_id(student_code):
-    student, _, _ = get_student_context(student_code)
+    student, student_class_code, major_id = get_student_context(student_code)
     if not student:
         return None
     if student.student_class and student.student_class.major:
@@ -242,6 +244,34 @@ def get_credit_limit_per_semester(student_code):
     return 25
 
 
+def get_current_training_program_credit_load(student_code):
+    training_program = get_student_training_program(student_code)
+    current_semester = get_current_training_program_semester(student_code)
+
+    if not training_program or not current_semester:
+        return None
+
+    credit_rows = db.session.query(Course.credits).join(
+        TrainingProgramCourse,
+        TrainingProgramCourse.course_id == Course.id,
+    ).filter(
+        TrainingProgramCourse.training_program_id == training_program.id,
+        TrainingProgramCourse.semester_no == current_semester,
+    ).all()
+
+    return sum(credits or 0 for credits, in credit_rows)
+
+
+def get_minimum_credits_to_enforce(student_code):
+    current_credit_load = get_current_training_program_credit_load(student_code)
+
+    # Hoc ky cuoi co tong so tin chi theo CTDT <= 12 thi khong ep moc toi thieu 12 tin.
+    if current_credit_load is not None and current_credit_load <= MIN_CREDITS_PER_SEMESTER:
+        return 0
+
+    return MIN_CREDITS_PER_SEMESTER
+
+
 def get_registered_counts(section_ids):
     if not section_ids:
         return {}
@@ -287,6 +317,8 @@ def check_prerequisite_courses(student_code, course_id):
     ).filter(
         Enrollment.student_code == student_code,
         Enrollment.status == EnrollmentStatus.REGISTERED,
+        ClassSection.end_date.isnot(None),
+        ClassSection.end_date < datetime.now(),
         ClassSection.course_id.in_(prerequisite_ids),
     ).distinct().all()
 
@@ -482,6 +514,21 @@ def cancel_registered_course(student_code, enrollment_id):
     if info and info.score_midterm is not None:
         return False, "Không thể hủy vì đã có điểm giữa kỳ."
 
+    minimum_credits = get_minimum_credits_to_enforce(student_code)
+    canceled_credits = (
+        enrollment.class_section.course.credits or 0
+        if enrollment.class_section.section_type == ClassSectionType.THEORY
+        else 0
+    )
+    credits_after_cancel = max(get_registered_credits(student_code) - canceled_credits, 0)
+    if minimum_credits and credits_after_cancel < minimum_credits:
+        return False, f"Khong the huy vi sau khi huy so tin chi se nho hon {minimum_credits}."
+    if minimum_credits and credits_after_cancel < minimum_credits:
+        return (
+            False,
+            f"KhÃ´ng thá»ƒ há»§y vÃ¬ sau khi há»§y sá»‘ tÃ­n chá»‰ sáº½ nhá» hÆ¡n {minimum_credits}.",
+        )
+
     enrollment.status = EnrollmentStatus.CANCELED
 
     linked_section = enrollment.class_section.linked_section
@@ -499,7 +546,7 @@ def cancel_registered_course(student_code, enrollment_id):
 
 
 def is_course_allowed(student_code, course):
-    student, _, major_id = get_student_context(student_code)
+    student, student_class_code, major_id = get_student_context(student_code)
     if student and student.class_id:
         training_program = get_student_training_program(student_code)
         if training_program:

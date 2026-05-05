@@ -63,7 +63,7 @@
 
   <p class="mb-2">
     Tổng số tín chỉ đã đăng ký: <strong>{{ registered_credits }}</strong>/25
-    {% if registered_credits < 12 %}
+    {% if minimum_registered_credits and registered_credits < minimum_registered_credits %}
     <span class="font-semibold text-orange-600">(Chưa đạt tối thiểu 12)</span>
     {% endif %}
   </p>

@@ -95,7 +95,7 @@ def index():
     effective_training_program_semester = (
         training_program_semester or default_training_program_semester
     )
-    _, student_class, _ = utils.get_student_context(student_code)
+    student, student_class, major_id = utils.get_student_context(student_code)
     default_faculty_id = utils.get_student_faculty_id(student_code)
     selected_faculty_id = faculty_id or (str(default_faculty_id) if default_faculty_id else "")
 
@@ -112,6 +112,7 @@ def index():
     )
     registered_courses = utils.get_registered_courses(student_code)
     registered_credits = utils.get_registered_credits(student_code)
+    minimum_registered_credits = utils.get_minimum_credits_to_enforce(student_code)
     registered_section_ids = [enrollment.class_section_id for enrollment in registered_courses]
 
     count_section_ids = []
@@ -146,6 +147,7 @@ def index():
         student_class=student_class,
         registered_courses=registered_courses,
         registered_credits=registered_credits,
+        minimum_registered_credits=minimum_registered_credits,
         registered_section_ids=registered_section_ids,
         section_registered_counts=section_registered_counts,
         section_capacity_limits=section_capacity_limits,
