@@ -1,4 +1,5 @@
 import hashlib
+
 from app import app, db
 from flask_login import LoginManager
 from datetime import datetime, timedelta
@@ -299,6 +300,12 @@ def schedules_overlap(schedule_a, schedule_b):
         and schedule_b.start_time < schedule_a.end_time
     )
 
+def register_section(student_code, class_section_id):
+    section = ClassSection.query.get(class_section_id)
+    if not section:
+        return False, "Không tìm thấy lớp học phần."
+    if not is_course_allowed(student_code,section.course):
+        return False, "Môn học không thuộc ngành của bạn "
 
 def get_schedule_conflict(student_code, candidate_sections):
     registered_sections = db.session.query(ClassSection).join(
@@ -489,7 +496,7 @@ def cancel_registered_course(student_code, enrollment_id):
     return True, "Hủy môn học thành công."
 
 def is_course_allowed(student_code, course):
-    student, _, major_id = get_student_context(student_code)
+    student, student_class_code, major_id = get_student_context(student_code)
     if student and student.class_id:
         training_program = get_student_training_program(student_code)
         if training_program:
