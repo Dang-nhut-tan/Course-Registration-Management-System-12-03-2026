@@ -44,6 +44,24 @@ WEEKDAYS_MAP = {
 }
 
 class ScheduleView(ModelView):
+    column_list = [
+        'day_of_week',
+        'start_time',
+        'end_time',
+        'class_section.course.id',
+        'class_section.course.name',
+        'class_section'
+    ]
+
+    column_labels = {
+        'day_of_week': 'Thứ',
+        'start_time': 'Giờ bắt đầu',
+        'end_time': 'Giờ kết thúc',
+        'class_section.course.id': 'Mã môn học',
+        'class_section.course.name': 'Tên môn học',
+        'class_section': 'Lớp học phần'
+    }
+
     column_formatters = {
         'day_of_week': lambda v, c, m, p: WEEKDAYS_MAP.get(m.day_of_week, m.day_of_week)
     }
