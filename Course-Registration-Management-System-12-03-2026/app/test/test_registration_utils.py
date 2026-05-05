@@ -1,0 +1,151 @@
+from datetime import datetime, timedelta
+
+from app import db
+from app import utils
+from app.model import ClassSection,Course,CoursePrerequisite,Enrollment,EnrollmentStatus,Faculty,Major,Student,StudentClass,TrainingProgram,TrainingProgramCourse
+from app.test.test_base import test_app, test_session
+
+
+CURRENT_TRAINING_PROGRAM_SEMESTER = 6
+
+
+def seed_student_context(test_session, student_code="2354050999"):
+    faculty = Faculty(id=1, name="CNTT")
+    major = Major(id=1, name="HTTT", faculty_id=1)
+    student_class = StudentClass(
+        id=1,
+        code="DH23IT01",
+        name="DH23IT01",
+        school_year="2023",
+        major_id=1,
+    )
+    student = Student(
+        student_code=student_code,
+        name="Test Student",
+        birth_year=2005,
+        major_id=1,
+        class_id=1,
+    )
+    training_program = TrainingProgram(
+        id=1,
+        name="CTDT HTTT K2023",
+        major_id=1,
+        school_year="2023",
+        max_credits_per_semester=25,
+    )
+
+    test_session.add_all([faculty, major, student_class, student, training_program])
+    test_session.commit()
+
+
+def add_course_with_section(
+    test_session,
+    course_id,
+    section_id,
+    credits=3,
+    semester_no=CURRENT_TRAINING_PROGRAM_SEMESTER,
+    start_offset_days=-5,
+    end_offset_days=30,
+):
+    course = Course(
+        id=course_id,
+        name=f"Course {course_id}",
+        credits=credits,
+        faculty_id=1,
+        is_shared=False,
+    )
+    section = ClassSection(
+        id=section_id,
+        name=f"LHP {section_id}",
+        course_id=course_id,
+        semester="2026-1",
+        max_students=50,
+        start_date=datetime.now() + timedelta(days=start_offset_days),
+        end_date=datetime.now() + timedelta(days=end_offset_days),
+        registration_deadline=datetime.now() + timedelta(days=7),
+    )
+    training_program_course = TrainingProgramCourse(
+        training_program_id=1,
+        course_id=course_id,
+        semester_no=semester_no,
+    )
+
+    test_session.add_all([course, section, training_program_course])
+    test_session.commit()
+
+    return course, section
+
+
+def test_prerequisite_requires_completed_course(test_session, test_app):
+    with test_app.app_context():
+        seed_student_context(test_session)
+        prerequisite_course, prerequisite_section = add_course_with_section(
+            test_session,
+            course_id=1,
+            section_id=1,
+            end_offset_days=10,
+        )
+        add_course_with_section(test_session, course_id=2, section_id=2)
+        test_session.add(CoursePrerequisite(course_id=2, prerequisite_id=1))
+        test_session.add(
+            Enrollment(
+                id=1,
+                student_code="2354050999",
+                class_section_id=prerequisite_section.id,
+                status=EnrollmentStatus.REGISTERED,
+            )
+        )
+        test_session.commit()
+
+        success, message = utils.register_section("2354050999", 2)
+
+        assert success is False
+
+
+def test_cancel_course_blocks_when_falling_below_minimum_credits(test_session, test_app):
+    with test_app.app_context():
+        seed_student_context(test_session)
+
+        for course_id in range(1, 6):
+            add_course_with_section(test_session, course_id=course_id, section_id=course_id)
+
+        for enrollment_id, section_id in enumerate(range(1, 5), start=1):
+            test_session.add(
+                Enrollment(
+                    id=enrollment_id,
+                    student_code="2354050999",
+                    class_section_id=section_id,
+                    status=EnrollmentStatus.REGISTERED,
+                )
+            )
+        test_session.commit()
+
+        success, message = utils.cancel_registered_course("2354050999", 1)
+
+        assert success is False
+        assert "12" in message
+
+
+def test_cancel_course_allows_below_minimum_for_graduation_semester(test_session, test_app):
+    with test_app.app_context():
+        seed_student_context(test_session)
+
+        for course_id in range(1, 4):
+            add_course_with_section(test_session, course_id=course_id, section_id=course_id)
+
+        for enrollment_id, section_id in enumerate(range(1, 4), start=1):
+            test_session.add(
+                Enrollment(
+                    id=enrollment_id,
+                    student_code="2354050999",
+                    class_section_id=section_id,
+                    status=EnrollmentStatus.REGISTERED,
+                )
+            )
+        test_session.commit()
+
+        success, message = utils.cancel_registered_course("2354050999", 1)
+        canceled_enrollment = db.session.get(Enrollment, 1)
+
+        assert success is True
+        assert canceled_enrollment.status == EnrollmentStatus.CANCELED

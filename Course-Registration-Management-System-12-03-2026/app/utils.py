@@ -5,6 +5,7 @@ from flask_login import LoginManager
 from datetime import datetime, timedelta
 from app.model import ClassSection, ClassSectionType, Course, CourseMajor, CoursePrerequisite, Enrollment, EnrollmentStatus, Faculty, Major, Schedule, Student, StudentClassSection, TrainingProgram, TrainingProgramCourse, User
 
+MIN_CREDITS_PER_SEMESTER = 12
 
 def check_login_student(student_code, password):
     if student_code and password:
@@ -77,7 +78,7 @@ def get_default_training_program_semester(student_code):
     if not semesters:
         return None
 
-    student, _, _ = get_student_context(student_code)
+    student, student_class_code, major_id = get_student_context(student_code)
     if not student or not student.student_class or not student.student_class.school_year:
         return semesters[0]
 
@@ -132,7 +133,7 @@ def get_allowed_course_ids(student_code, training_program_semester=None):
 
 
 def get_student_faculty_id(student_code):
-    student, _, _ = get_student_context(student_code)
+    student, student_class_code, major_id = get_student_context(student_code)
     if not student:
         return None
     if student.student_class and student.student_class.major:
@@ -142,6 +143,7 @@ def get_student_faculty_id(student_code):
         if major:
             return major.faculty_id
     return None
+
 
 def get_sections(student_code, course_id=None, faculty_id=None, training_program_semester=None):
     query = ClassSection.query.filter(ClassSection.section_type == ClassSectionType.THEORY)
@@ -192,6 +194,27 @@ def get_registered_courses(student_code, course_id=None, faculty_id=None):
         Enrollment.status == EnrollmentStatus.REGISTERED,
     )
 
+def get_current_training_program_semester(student_code):
+    return get_default_training_program_semester(student_code)
+
+
+def get_registered_courses(student_code):
+    query = Enrollment.query.join(ClassSection).filter(
+        Enrollment.student_code == student_code,
+        ClassSection.section_type == ClassSectionType.THEORY,
+        Enrollment.status == EnrollmentStatus.REGISTERED,
+    )
+
+    training_program = get_student_training_program(student_code)
+    current_semester = get_current_training_program_semester(student_code)
+    if training_program and current_semester:
+        query = query.join(
+            TrainingProgramCourse,
+            TrainingProgramCourse.course_id == ClassSection.course_id,
+        ).filter(
+            TrainingProgramCourse.training_program_id == training_program.id,
+            TrainingProgramCourse.semester_no == current_semester,
+        )
     training_program = get_student_training_program(student_code)
     current_semester = get_current_training_program_semester(student_code)
     if training_program and current_semester:
@@ -232,11 +255,41 @@ def get_registered_credits(student_code):
 
     return sum(enrollment.class_section.course.credits or 0 for enrollment in enrollments)
 
+
 def get_credit_limit_per_semester(student_code):
     training_program = get_student_training_program(student_code)
     if training_program and training_program.max_credits_per_semester is not None:
         return training_program.max_credits_per_semester
     return 25
+
+
+def get_current_training_program_credit_load(student_code):
+    training_program = get_student_training_program(student_code)
+    current_semester = get_current_training_program_semester(student_code)
+
+    if not training_program or not current_semester:
+        return None
+
+    credit_rows = db.session.query(Course.credits).join(
+        TrainingProgramCourse,
+        TrainingProgramCourse.course_id == Course.id,
+    ).filter(
+        TrainingProgramCourse.training_program_id == training_program.id,
+        TrainingProgramCourse.semester_no == current_semester,
+    ).all()
+
+    return sum(credits or 0 for credits, in credit_rows)
+
+
+def get_minimum_credits_to_enforce(student_code):
+    current_credit_load = get_current_training_program_credit_load(student_code)
+
+    # Hoc ky cuoi co tong so tin chi theo CTDT <= 12 thi khong ep moc toi thieu 12 tin.
+    if current_credit_load is not None and current_credit_load <= MIN_CREDITS_PER_SEMESTER:
+        return 0
+
+    return MIN_CREDITS_PER_SEMESTER
+
 
 def get_registered_counts(section_ids):
     if not section_ids:
@@ -244,7 +297,7 @@ def get_registered_counts(section_ids):
 
     enrollments = Enrollment.query.filter(
         Enrollment.class_section_id.in_(section_ids),
-        Enrollment.status == EnrollmentStatus.REGISTERED,
+        Enrollment.status == EnrollmentStatus.REGISTERED
     ).all()
 
     counts = {}
@@ -252,6 +305,7 @@ def get_registered_counts(section_ids):
         counts[enrollment.class_section_id] = counts.get(enrollment.class_section_id, 0) + 1
 
     return counts
+
 
 def get_section_capacity_limit(section):
     limits = []
@@ -267,6 +321,7 @@ def get_section_capacity_limit(section):
 
     return min(limits)
 
+
 def check_prerequisite_courses(student_code, course_id):
     prerequisite_rows = CoursePrerequisite.query.filter(
         CoursePrerequisite.course_id == course_id
@@ -281,6 +336,8 @@ def check_prerequisite_courses(student_code, course_id):
     ).filter(
         Enrollment.student_code == student_code,
         Enrollment.status == EnrollmentStatus.REGISTERED,
+        ClassSection.end_date.isnot(None),
+        ClassSection.end_date < datetime.now(),
         ClassSection.course_id.in_(prerequisite_ids),
     ).distinct().all()
 
@@ -293,6 +350,7 @@ def check_prerequisite_courses(student_code, course_id):
     missing_courses = Course.query.filter(Course.id.in_(missing_ids)).all()
     return False, [course.name for course in missing_courses]
 
+
 def schedules_overlap(schedule_a, schedule_b):
     return (
         schedule_a.day_of_week == schedule_b.day_of_week
@@ -300,12 +358,6 @@ def schedules_overlap(schedule_a, schedule_b):
         and schedule_b.start_time < schedule_a.end_time
     )
 
-def register_section(student_code, class_section_id):
-    section = ClassSection.query.get(class_section_id)
-    if not section:
-        return False, "Không tìm thấy lớp học phần."
-    if not is_course_allowed(student_code,section.course):
-        return False, "Môn học không thuộc ngành của bạn "
 
 def get_schedule_conflict(student_code, candidate_sections):
     registered_sections = db.session.query(ClassSection).join(
@@ -345,6 +397,7 @@ def has_registered_same_course(student_code, candidate_sections):
         Enrollment.status == EnrollmentStatus.REGISTERED,
         ClassSection.course_id.in_(candidate_course_ids),
     ).first()
+
 
 def register_section(student_code, class_section_id):
     try:
@@ -480,6 +533,21 @@ def cancel_registered_course(student_code, enrollment_id):
     if info and info.score_midterm is not None:
         return False, "Không thể hủy vì đã có điểm giữa kỳ."
 
+    minimum_credits = get_minimum_credits_to_enforce(student_code)
+    canceled_credits = (
+        enrollment.class_section.course.credits or 0
+        if enrollment.class_section.section_type == ClassSectionType.THEORY
+        else 0
+    )
+    credits_after_cancel = max(get_registered_credits(student_code) - canceled_credits, 0)
+    if minimum_credits and credits_after_cancel < minimum_credits:
+        return False, f"Khong the huy vi sau khi huy so tin chi se nho hon {minimum_credits}."
+    if minimum_credits and credits_after_cancel < minimum_credits:
+        return (
+            False,
+            f"KhÃ´ng thá»ƒ há»§y vÃ¬ sau khi há»§y sá»‘ tÃ­n chá»‰ sáº½ nhá» hÆ¡n {minimum_credits}.",
+        )
+
     enrollment.status = EnrollmentStatus.CANCELED
 
     linked_section = enrollment.class_section.linked_section
@@ -494,6 +562,7 @@ def cancel_registered_course(student_code, enrollment_id):
 
     db.session.commit()
     return True, "Hủy môn học thành công."
+
 
 def is_course_allowed(student_code, course):
     student, student_class_code, major_id = get_student_context(student_code)
@@ -514,6 +583,7 @@ def is_course_allowed(student_code, course):
         major_id=major_id
     ).first() is not None
 
+
 def get_filter_data(student_code, faculty_id=None, training_program_semester=None):
     courses, faculties = get_open_filter_options(student_code, training_program_semester)
     if faculty_id:
@@ -522,7 +592,7 @@ def get_filter_data(student_code, faculty_id=None, training_program_semester=Non
     return {
         "courses": courses,
         "faculties": faculties,
-        "training_program_semesters": get_available_training_program_semesters(student_code)
+        "training_program_semesters": get_available_training_program_semesters(student_code),
     }
 
 #==========================================================
