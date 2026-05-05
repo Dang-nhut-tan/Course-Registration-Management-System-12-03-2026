@@ -127,6 +127,8 @@ class Course(BaseModel):
     is_shared = Column(Boolean, default=False)
     faculty_id = Column(Integer, ForeignKey("faculties.id"))
 
+    faculty = relationship("Faculty", backref="courses")
+
 
 class CourseMajor(db.Model):
     __tablename__ = "course_major"

@@ -78,7 +78,19 @@ class ScheduleView(ModelView):
 
         return super(ScheduleView, self).create_model(form)
 
-admin.add_view(ModelView(Course, db.session))
+
+class CourseView(ModelView):
+    column_list = ['id', 'name', 'credits', 'faculty']
+
+    column_labels = {
+        'id': 'Mã môn học',
+        'name': 'Tên môn học',
+        'credits': 'Số tín chỉ',
+        'faculty': 'Khoa'
+    }
+    form_columns = ['id', 'name', 'credits', 'faculty']
+
+admin.add_view(CourseView(Course, db.session))
 admin.add_view(ClassSectionView(ClassSection, db.session))
 admin.add_view(ScheduleView(Schedule, db.session))
 admin.add_view(ModelView(Room, db.session))
