@@ -33,8 +33,21 @@ class ClassSectionView(ModelView):
 
         return super(ClassSectionView, self).create_model(form)
 
+WEEKDAYS_MAP = {
+    2: "Thứ 2",
+    3: "Thứ 3",
+    4: "Thứ 4",
+    5: "Thứ 5",
+    6: "Thứ 6",
+    7: "Thứ 7",
+    8: "Chủ nhật"
+}
 
 class ScheduleView(ModelView):
+    column_formatters = {
+        'day_of_week': lambda v, c, m, p: WEEKDAYS_MAP.get(m.day_of_week, m.day_of_week)
+    }
+
     def create_model(self, form):
         day = form.day.data
         start_time = form.start_time.data
