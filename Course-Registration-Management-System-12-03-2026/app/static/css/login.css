@@ -2,14 +2,6 @@ body {
     font-family: 'Inter', sans-serif;
 }
 
-.bg-background-light {
-    background-color: #f4f6fb;
-}
-
-.bg-primary {
-    background-color: #135bec;
-}
-
 .link-help {
     background-color: #135bec;
     color: white;
@@ -17,42 +9,65 @@ body {
     border-radius: 8px;
 }
 
-/* Header gradient */
-.login-header{
-    height:120px;
-    background: linear-gradient(90deg,#135bec,#4b8df8);
-    display:flex;
-    align-items:center;
-    justify-content:center;
+.role-combobox {
+    position: relative;
 }
 
-/* icon */
-.login-icon{
-    font-size:40px;
-    color:white;
+.role-combobox__button {
+    width: 100%;
+    min-height: 42px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #111827;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    text-align: left;
 }
 
-/* input */
-.input{
-    width:100%;
-    border:1px solid #e2e8f0;
-    border-radius:8px;
-    padding:10px 12px;
+.role-combobox__button:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
 }
 
-.input:focus{
-    outline:none;
-    border-color:#135bec;
+.role-combobox__arrow {
+    color: #4b5563;
+    font-size: 18px;
+    line-height: 1;
 }
 
-/* login button */
-.login-btn{
-    width:100%;
-    background:#135bec;
-    color:white;
-    padding:12px;
-    border-radius:8px;
-    font-weight:600;
+.role-combobox__list {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    display: none;
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid #9ca3af;
+    background: #ffffff;
+    border-radius: 4px;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+}
+
+.role-combobox.is-open .role-combobox__list {
+    display: block;
+}
+
+.role-combobox__option {
+    cursor: pointer;
+    padding: 9px 12px;
+    color: #374151;
+}
+
+.role-combobox__option:hover,
+.role-combobox__option.is-selected {
+    background: #1d6fd8;
+    color: #ffffff;
 }
 
 

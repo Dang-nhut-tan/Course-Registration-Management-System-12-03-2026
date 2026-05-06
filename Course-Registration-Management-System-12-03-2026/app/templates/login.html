@@ -65,6 +65,41 @@
 
           <form id="loginForm" method="POST" class="space-y-5">
             <div>
+              <label class="block text-sm font-semibold mb-1">Vai trò đăng nhập</label>
+              <div class="role-combobox" id="roleCombobox">
+                <button
+                  type="button"
+                  class="role-combobox__button"
+                  id="roleComboboxButton"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                >
+                  <span id="roleComboboxText">Sinh viên</span>
+                  <span class="role-combobox__arrow">⌄</span>
+                </button>
+                <ul class="role-combobox__list" id="roleComboboxList" role="listbox">
+                  <li
+                    class="role-combobox__option is-selected"
+                    role="option"
+                    aria-selected="true"
+                    data-value="student"
+                  >
+                    Sinh viên
+                  </li>
+                  <li
+                    class="role-combobox__option"
+                    role="option"
+                    aria-selected="false"
+                    data-value="admin"
+                  >
+                    Admin
+                  </li>
+                </ul>
+              </div>
+              <input type="hidden" id="login_role" name="login_role" value="student" />
+            </div>
+
+            <div>
               <label class="block text-sm font-semibold mb-1">Mã số sinh viên</label>
               <input
                 id="student_code"
