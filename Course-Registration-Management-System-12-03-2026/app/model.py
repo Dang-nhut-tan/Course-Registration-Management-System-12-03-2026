@@ -122,8 +122,8 @@ class TrainingProgramCourse(db.Model):
 class Course(BaseModel):
     __tablename__ = "courses"
 
-    name = Column(String(255))
-    credits = Column(Integer)
+    name = Column(String(255), nullable=False)
+    credits = Column(Integer, nullable=False)
     is_shared = Column(Boolean, default=False)
     faculty_id = Column(Integer, ForeignKey("faculties.id"))
 
