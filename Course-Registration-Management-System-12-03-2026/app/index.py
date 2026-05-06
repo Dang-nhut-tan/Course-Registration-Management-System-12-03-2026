@@ -2,7 +2,8 @@ from flask import redirect, render_template, request, session, url_for
 
 from app import app
 from app import utils
-from app.admin import admin
+from app import admin
+from datetime import datetime, timedelta
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -155,6 +156,27 @@ def index():
         message_type=request.args.get("msg_type", "")
     )
 
+#===========================================================
+@app.route("/timetable")
+def timetable():
+    student_code = session.get("student_code")
+    if not student_code:
+        return redirect(url_for("login"))
+
+    week = request.args.get("week", 1, type=int)
+    context = utils.get_student_timetable(student_code, week)
+
+    semester = f"Kỳ {context['semester_no']}"
+
+    return render_template(
+        "timetable.html",
+        student_code=student_code,
+        student_name=session.get("student_name"),
+        schedules=context['schedules'],
+        week_days=context['week_days'],
+        week=context['week'],
+        semester=semester
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)

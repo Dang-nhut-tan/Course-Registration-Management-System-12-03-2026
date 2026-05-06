@@ -79,7 +79,6 @@ class Major(BaseModel):
     name = Column(String(255))
     faculty_id = Column(Integer, ForeignKey("faculties.id"), nullable=False)
 
-
 class StudentClass(BaseModel):
     __tablename__ = "student_classes"
 
@@ -110,7 +109,6 @@ class TrainingProgram(BaseModel):
         lazy=True,
     )
 
-
 class TrainingProgramCourse(db.Model):
     __tablename__ = "training_program_course"
 
@@ -121,7 +119,6 @@ class TrainingProgramCourse(db.Model):
     training_program = relationship("TrainingProgram", back_populates="training_program_courses")
     course = relationship("Course")
 
-
 class Course(BaseModel):
     __tablename__ = "courses"
 
@@ -129,6 +126,8 @@ class Course(BaseModel):
     credits = Column(Integer)
     is_shared = Column(Boolean, default=False)
     faculty_id = Column(Integer, ForeignKey("faculties.id"))
+
+    faculty = relationship("Faculty", backref="courses")
 
 
 class CourseMajor(db.Model):
@@ -227,7 +226,6 @@ class Enrollment(BaseModel):
     registered_at = Column(DateTime, nullable=True)
 
     student = relationship("Student", backref="enrollments")
-
 
 def get_sample_data():
     from app.seed_data import sample_data

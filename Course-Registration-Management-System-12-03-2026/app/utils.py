@@ -161,7 +161,6 @@ def get_sections(student_code, course_id=None, faculty_id=None, training_program
 
     return query.all()
 
-
 def get_open_filter_options(student_code, training_program_semester=None):
     allowed_course_ids = get_allowed_course_ids(student_code, training_program_semester)
     if not allowed_course_ids:
@@ -188,6 +187,16 @@ def get_open_filter_options(student_code, training_program_semester=None):
 def get_current_training_program_semester(student_code):
     return get_default_training_program_semester(student_code)
 
+def get_registered_courses(student_code, course_id=None, faculty_id=None):
+    query = Enrollment.query.join(ClassSection).filter(
+        Enrollment.student_code == student_code,
+        ClassSection.section_type == ClassSectionType.THEORY,
+        Enrollment.status == EnrollmentStatus.REGISTERED,
+    )
+
+def get_current_training_program_semester(student_code):
+    return get_default_training_program_semester(student_code)
+
 
 def get_registered_courses(student_code):
     query = Enrollment.query.join(ClassSection).filter(
@@ -196,6 +205,16 @@ def get_registered_courses(student_code):
         Enrollment.status == EnrollmentStatus.REGISTERED,
     )
 
+    training_program = get_student_training_program(student_code)
+    current_semester = get_current_training_program_semester(student_code)
+    if training_program and current_semester:
+        query = query.join(
+            TrainingProgramCourse,
+            TrainingProgramCourse.course_id == ClassSection.course_id,
+        ).filter(
+            TrainingProgramCourse.training_program_id == training_program.id,
+            TrainingProgramCourse.semester_no == current_semester,
+        )
     training_program = get_student_training_program(student_code)
     current_semester = get_current_training_program_semester(student_code)
     if training_program and current_semester:
@@ -574,4 +593,44 @@ def get_filter_data(student_code, faculty_id=None, training_program_semester=Non
         "courses": courses,
         "faculties": faculties,
         "training_program_semesters": get_available_training_program_semesters(student_code),
+    }
+
+#==========================================================
+def get_student_timetable(student_code, requested_week=1):
+    semester_no = get_current_training_program_semester(student_code)
+
+    training_program = get_student_training_program(student_code)
+
+    if not training_program:
+        return {"schedules": [], "semester": "N/A", "week_days": [], "week": requested_week}
+
+    schedules = db.session.query(Schedule) \
+        .join(ClassSection, Schedule.class_section_id == ClassSection.id) \
+        .join(Enrollment, Enrollment.class_section_id == ClassSection.id) \
+        .join(TrainingProgramCourse, TrainingProgramCourse.course_id == ClassSection.course_id) \
+        .filter(
+        Enrollment.student_code == student_code,
+        Enrollment.status == EnrollmentStatus.REGISTERED,
+        TrainingProgramCourse.training_program_id == training_program.id,
+        TrainingProgramCourse.semester_no == semester_no
+    ).all()
+
+    raw_semester = "2025-1"
+    if schedules:
+        raw_semester = schedules[0].class_section.semester
+
+    if schedules and schedules[0].class_section.start_date:
+        start_point = schedules[0].class_section.start_date.date()
+    else:
+        start_point = datetime.now().date()
+
+    week_start_date = start_point + timedelta(days=(requested_week - 1) * 7)
+    week_days = [{'thu': i + 2 if i < 6 else 8, 'date': week_start_date + timedelta(days=i)} for i in range(7)]
+
+    return {
+        "schedules": schedules,
+        "semester_no": semester_no,
+        "semester_raw": raw_semester,
+        "week_days": week_days,
+        "week": requested_week
     }

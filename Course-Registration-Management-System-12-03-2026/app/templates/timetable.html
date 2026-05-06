@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thời khóa biểu cá nhân</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .side-col {
+            background-color: #1f6096;
+            color: white;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .theory-bg {
+            background-color: #dceaf6;
+            border: 1px solid #1f6096;
+        }
+
+        .practice-bg {
+            background-color: #fce8e8;
+            border: 1px solid #d9534f;
+        }
+        table td, table th {
+            border: 1px solid #e5e7eb;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans min-h-screen">
+
+  <div class="max-w-7xl mx-auto p-6">
+
+    <div class="mb-4 flex flex-col md:flex-row justify-between items-end border-b-2 border-blue-800 pb-2">
+        <div>
+            <h1 class="text-2xl font-bold text-[#1f6096] uppercase mb-1">Thời Khóa Biểu</h1>
+            <p class="font-semibold text-gray-800">{{ student_code }} - {{ student_name }}</p>
+            <div class="text-lg font-bold text-blue-900 uppercase mt-2">Học kỳ: {{ semester }}</div>
+        </div>
+
+        <div class="flex flex-col items-end gap-3">
+            <div class="flex items-center gap-4 bg-gray-100 p-1 rounded-lg shadow-inner">
+                <a href="{{ url_for('timetable', week=week-1) }}" class="px-3 py-1 hover:bg-white rounded shadow-sm transition">Tuần trước</a>
+                <span class="font-bold text-blue-700 px-4">TUẦN {{ week }}</span>
+                <a href="{{ url_for('timetable', week=week+1) }}" class="px-3 py-1 hover:bg-white rounded shadow-sm transition">Tuần sau</a>
+            </div>
+            <a href="{{ url_for('index') }}" class="text-sm text-blue-600 hover:underline">Quay về trang đăng ký</a>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto bg-white shadow-xl rounded-lg border border-gray-300">
+      <table class="w-full border-collapse text-sm min-w-[1000px]">
+        <thead>
+            <tr class="bg-white text-gray-800 border-b-2 border-blue-800">
+                <th class="w-20 p-3 side-col">Tiết</th>
+                {% for day in week_days %}
+                    <th class="p-2 text-center align-middle w-[120px]">
+                        Thứ {{ 'CN' if day.thu == 8 else day.thu }} <br>
+                        <span class="text-gray-500 font-normal text-xs">({{ day.date.strftime('%d/%m') }})</span>
+                    </th>
+                {% endfor %}
+                <th class="w-20 p-3 side-col">Giờ</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% set period_times = {
+                1:'07:00', 2:'07:50', 3:'08:40', 4:'09:50', 5:'10:40', 6:'11:30',
+                7:'12:45', 8:'13:35', 9:'14:25', 10:'15:30', 11:'16:20', 12:'17:10', 13:'18:00'
+            } %}
+
+            {% for tiet in range(1, 14) %}
+            <tr class="h-12">
+                <td class="side-col text-xs">Tiết {{ tiet }}</td>
+
+                {% for i in range(0, 7) %}
+                    {% set thu = i + 2 %}
+                    {# Sử dụng namespace để lưu biến xuyên suốt vòng lặp #}
+                    {% set ns = namespace(schedule_item=None, is_covered=false) %}
+
+                    {% for s in schedules %}
+                        {% if s.day_of_week == thu %}
+                            {% if (tiet == 1 and s.start_time.hour < 12) or (tiet == 7 and s.start_time.hour >= 12) %}
+                                {% set ns.schedule_item = s %}
+                            {% endif %}
+
+                            {% if (s.start_time.hour < 12 and tiet > 1 and tiet <= 5) or
+                                    (s.start_time.hour >= 12 and tiet > 7 and tiet <= 11) %}
+                                {% set ns.is_covered = true %}
+                            {% endif %}
+                    {% endif %}
+                {% endfor %}
+
+                {% if ns.schedule_item %}
+                    {% set s = ns.schedule_item %}
+                    {% set is_practice = s.class_section.section_type.name == 'PRACTICE' %}
+                    <td class="p-1 border {{ 'theory-bg' if not is_practice else 'practice-bg' }}" rowspan="5">
+                        <div class="flex flex-col h-full max-w-[110px] mx-auto">
+                            <div class="font-bold text-blue-900 text-[10px] uppercase leading-tight mb-1">
+                                {{ s.class_section.course.name }}
+                            </div>
+                            <div class="text-[10px] text-gray-800 italic">Nhóm: {{ s.class_section.name }}</div>
+                            <div class="text-[10px] text-gray-800 mt-1 font-semibold">Phòng: {{ s.class_section.room.name }}</div>
+                            <div class="text-[10px] text-gray-600 mt-auto pt-1 border-t border-blue-200/50"> Giảng viên: {{ s.class_section.teacher.name }}
+                            </div>
+                        </div>
+                    </td>
+                {% elif not ns.is_covered %}
+                    <td class="bg-white hover:bg-gray-50 transition-colors"></td>
+                {% endif %}
+            {% endfor %}
+
+            <td class="side-col text-xs">{{ period_times[tiet] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-4 flex gap-6 text-xs font-medium items-center justify-end text-gray-700">
+        <div class="flex items-center gap-2"><div class="w-4 h-4 theory-bg rounded shadow-sm"></div> Môn Lý thuyết</div>
+        <div class="flex items-center gap-2"><div class="w-4 h-4 practice-bg rounded shadow-sm"></div> Môn Thực hành</div>
+    </div>
+  </div>
+
+  <footer class="text-center text-xs text-gray-400 py-8">
+    <p>2024 Phòng Đào tạo - Đại học Mở</p>
+  </footer>
+</body>
+</html>

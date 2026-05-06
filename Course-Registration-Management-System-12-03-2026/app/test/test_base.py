@@ -19,7 +19,6 @@ def create_app():
 
     return app
 
-
 @pytest.fixture
 def test_app():
     app = create_app()

@@ -30,5 +30,11 @@ def sample_enrollment(sample_class_section, test_session):
 def test_delete_class_section(test_admin, sample_class_section, sample_enrollment, test_session, test_app):
     with test_app.test_request_context():
         actual_class_section = test_admin.delete_model(sample_class_section)
+
         assert actual_class_section is False
 
+def test_delete_section_empty(test_admin, sample_class_section, test_session, test_app):
+    with test_app.test_request_context():
+        actual_class_section = test_admin.delete_model(sample_class_section)
+
+        assert actual_class_section is True
