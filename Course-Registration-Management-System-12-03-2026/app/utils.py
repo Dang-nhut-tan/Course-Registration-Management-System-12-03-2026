@@ -3,7 +3,7 @@ import hashlib
 from app import app, db
 from flask_login import LoginManager
 from datetime import datetime, timedelta
-from app.model import ClassSection, ClassSectionType, Course, CourseMajor, CoursePrerequisite, Enrollment, EnrollmentStatus, Faculty, Major, Schedule, Student, StudentClassSection, TrainingProgram, TrainingProgramCourse, User
+from app.model import ClassSection, ClassSectionType, Course, CourseMajor, CoursePrerequisite, Enrollment, EnrollmentStatus, Faculty, Major, Schedule, Student, StudentClassSection, TrainingProgram, TrainingProgramCourse, User, UserRole
 
 MIN_CREDITS_PER_SEMESTER = 12
 
@@ -14,6 +14,14 @@ def check_login_student(student_code, password):
             User.password == password,
             User.student_code == student_code.strip(),
         ).first()
+
+def check_login_admin(username, password):
+    if username and password:
+        password = hashlib.md5(password.strip().encode('utf-8')).hexdigest()
+        return User.query.filter(User.username == username.strip(),
+                                 User.password == password,
+                                 User.role == UserRole.ADMIN).first()
+    return None
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -183,17 +191,6 @@ def get_open_filter_options(student_code, training_program_semester=None):
     ).distinct().order_by(Faculty.name).all()
     return courses, faculties
 
-
-def get_current_training_program_semester(student_code):
-    return get_default_training_program_semester(student_code)
-
-def get_registered_courses(student_code, course_id=None, faculty_id=None):
-    query = Enrollment.query.join(ClassSection).filter(
-        Enrollment.student_code == student_code,
-        ClassSection.section_type == ClassSectionType.THEORY,
-        Enrollment.status == EnrollmentStatus.REGISTERED,
-    )
-
 def get_current_training_program_semester(student_code):
     return get_default_training_program_semester(student_code)
 
@@ -217,19 +214,12 @@ def get_registered_courses(student_code):
         )
     training_program = get_student_training_program(student_code)
     current_semester = get_current_training_program_semester(student_code)
-    if training_program and current_semester:
-        query = query.join(
-            TrainingProgramCourse,
-            TrainingProgramCourse.course_id == ClassSection.course_id,
-        ).filter(
-            TrainingProgramCourse.training_program_id == training_program.id,
-            TrainingProgramCourse.semester_no == current_semester,
-        )
 
     return query.all()
 
 
 def get_registered_credits(student_code):
+    #Thay Enrollment.query = db.session.query(Enrollment)
     enrollments = Enrollment.query.join(
         ClassSection, Enrollment.class_section_id == ClassSection.id
     ).join(
@@ -245,7 +235,7 @@ def get_registered_credits(student_code):
     if training_program and current_semester:
         enrollments = enrollments.join(
             TrainingProgramCourse,
-            TrainingProgramCourse.course_id == ClassSection.course_id,
+            TrainingProgramCourse.course_id == ClassSection.course_id,  #Thay ClassSection.course_id = Course.id
         ).filter(
             TrainingProgramCourse.training_program_id == training_program.id,
             TrainingProgramCourse.semester_no == current_semester,
@@ -542,11 +532,6 @@ def cancel_registered_course(student_code, enrollment_id):
     credits_after_cancel = max(get_registered_credits(student_code) - canceled_credits, 0)
     if minimum_credits and credits_after_cancel < minimum_credits:
         return False, f"Khong the huy vi sau khi huy so tin chi se nho hon {minimum_credits}."
-    if minimum_credits and credits_after_cancel < minimum_credits:
-        return (
-            False,
-            f"KhÃ´ng thá»ƒ há»§y vÃ¬ sau khi há»§y sá»‘ tÃ­n chá»‰ sáº½ nhá» hÆ¡n {minimum_credits}.",
-        )
 
     enrollment.status = EnrollmentStatus.CANCELED
 

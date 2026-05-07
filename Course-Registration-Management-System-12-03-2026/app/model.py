@@ -60,7 +60,7 @@ class Campus(BaseModel):
 class Room(BaseModel):
     __tablename__ = "rooms"
 
-    name = Column(String(100))
+    name = Column(String(100), nullable=False)
     room_type = Column(String(50))
     capacity = Column(Integer)
     campus_id = Column(Integer, ForeignKey("campuses.id"), nullable=False)
@@ -147,7 +147,7 @@ class CoursePrerequisite(db.Model):
 class Teacher(BaseModel):
     __tablename__ = "teachers"
 
-    name = Column(String(255))
+    name = Column(String(255), nullable=False)
     faculty_id = Column(Integer, ForeignKey("faculties.id"))
 
 
@@ -187,10 +187,10 @@ class ClassSection(BaseModel):
     teacher = relationship("Teacher")
     room = relationship("Room")
 
-    semester = Column(String(50))
-    max_students = Column(Integer)
-    start_date = Column(DateTime)
-    end_date = Column(DateTime)
+    semester = Column(String(50), nullable=False)
+    max_students = Column(Integer, nullable=False)
+    start_date = Column(DateTime, nullable=False)
+    end_date = Column(DateTime, nullable=False)
     registration_deadline = Column(DateTime)
     section_type = Column(Enum(ClassSectionType), default=ClassSectionType.THEORY, nullable=False)
     linked_section_id = Column(Integer, ForeignKey("class_sections.id"))
@@ -212,9 +212,9 @@ class Schedule(BaseModel):
     __tablename__ = "schedules"
 
     class_section_id = Column(Integer, ForeignKey("class_sections.id"))
-    day_of_week = Column(Integer)
-    start_time = Column(Time)
-    end_time = Column(Time)
+    day_of_week = Column(Integer, nullable=False)
+    start_time = Column(Time, nullable=False)
+    end_time = Column(Time, nullable=False)
 
 
 class Enrollment(BaseModel):
