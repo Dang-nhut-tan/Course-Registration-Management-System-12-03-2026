@@ -191,6 +191,7 @@ def get_open_filter_options(student_code, training_program_semester=None):
     ).distinct().order_by(Faculty.name).all()
     return courses, faculties
 
+
 def get_current_training_program_semester(student_code):
     return get_default_training_program_semester(student_code)
 
@@ -212,14 +213,11 @@ def get_registered_courses(student_code):
             TrainingProgramCourse.training_program_id == training_program.id,
             TrainingProgramCourse.semester_no == current_semester,
         )
-    training_program = get_student_training_program(student_code)
-    current_semester = get_current_training_program_semester(student_code)
 
     return query.all()
 
 
 def get_registered_credits(student_code):
-    #Thay Enrollment.query = db.session.query(Enrollment)
     enrollments = Enrollment.query.join(
         ClassSection, Enrollment.class_section_id == ClassSection.id
     ).join(
@@ -580,7 +578,6 @@ def get_filter_data(student_code, faculty_id=None, training_program_semester=Non
         "training_program_semesters": get_available_training_program_semesters(student_code),
     }
 
-#==========================================================
 def get_student_timetable(student_code, requested_week=1):
     semester_no = get_current_training_program_semester(student_code)
 
