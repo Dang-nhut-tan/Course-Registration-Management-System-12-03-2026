@@ -187,16 +187,6 @@ def get_open_filter_options(student_code, training_program_semester=None):
 def get_current_training_program_semester(student_code):
     return get_default_training_program_semester(student_code)
 
-def get_registered_courses(student_code, course_id=None, faculty_id=None):
-    query = Enrollment.query.join(ClassSection).filter(
-        Enrollment.student_code == student_code,
-        ClassSection.section_type == ClassSectionType.THEORY,
-        Enrollment.status == EnrollmentStatus.REGISTERED,
-    )
-
-def get_current_training_program_semester(student_code):
-    return get_default_training_program_semester(student_code)
-
 
 def get_registered_courses(student_code):
     query = Enrollment.query.join(ClassSection).filter(
@@ -205,16 +195,6 @@ def get_registered_courses(student_code):
         Enrollment.status == EnrollmentStatus.REGISTERED,
     )
 
-    training_program = get_student_training_program(student_code)
-    current_semester = get_current_training_program_semester(student_code)
-    if training_program and current_semester:
-        query = query.join(
-            TrainingProgramCourse,
-            TrainingProgramCourse.course_id == ClassSection.course_id,
-        ).filter(
-            TrainingProgramCourse.training_program_id == training_program.id,
-            TrainingProgramCourse.semester_no == current_semester,
-        )
     training_program = get_student_training_program(student_code)
     current_semester = get_current_training_program_semester(student_code)
     if training_program and current_semester:
