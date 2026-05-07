@@ -2,12 +2,20 @@ from app.utils import check_room_conflict
 import pytest
 from app.model import ClassSection, Schedule, Room
 from app.test.test_base import test_app, test_session
-from datetime import time
+from datetime import datetime, time
 
 @pytest.fixture
 def sample_schedule(test_session):
     room = Room(id=1, name="A101", campus_id=1)
-    cs = ClassSection(id=10, semester="2024-1", room_id=room.id, section_type= 'theory')
+    cs = ClassSection(
+        id=10,
+        semester="2024-1",
+        room_id=room.id,
+        section_type='theory',
+        max_students=50,
+        start_date=datetime(2024, 1, 1),
+        end_date=datetime(2024, 5, 1),
+    )
     sch = Schedule(
         day_of_week= 2,
         start_time=time(7, 0),

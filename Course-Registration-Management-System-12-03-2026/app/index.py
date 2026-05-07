@@ -187,7 +187,12 @@ def timetable():
         schedules=context['schedules'],
         week_days=context['week_days'],
         week=context['week'],
-        semester=semester
+        semester=semester,
+        max_week=context["max_week"],
+        can_previous_week=context["can_previous_week"],
+        can_next_week=context["can_next_week"],
+        term_start=context["term_start"],
+        term_end=context["term_end"],
     )
 
 if __name__ == "__main__":
