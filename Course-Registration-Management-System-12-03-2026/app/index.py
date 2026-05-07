@@ -1,8 +1,9 @@
 from flask import redirect, render_template, request, session, url_for
-
+from flask_login import login_user
 from app import app
 from app import utils
 from app import admin
+from app.model import UserRole
 from datetime import datetime, timedelta
 
 
@@ -11,16 +12,27 @@ def login():
     err_msg = ""
 
     if request.method == "POST":
-        student_code = request.form.get("student_code")
+        role = request.form.get("login_role")
+        username = request.form.get("student_code")
         password = request.form.get("password")
         remember = request.form.get("remember") == "on"
-        user = utils.check_login_student(student_code=student_code, password=password)
+
+        user = None
+        if role == "admin":
+            user = utils.check_login_admin(username=username, password=password)
+        else:
+            user = utils.check_login_student(student_code=username, password=password)
 
         if user:
-            session.permanent = remember
-            session["student_code"] = user.student_code
-            session["student_name"] = user.student.name if user.student else ""
-            return redirect(url_for("index"))
+            login_user(user, remember=remember)
+
+            if user.role == UserRole.STUDENT:
+                session["student_code"] = user.student_code
+                session["student_name"] = user.student.name if user.student else ""
+                return redirect(url_for("index"))
+
+            elif user.role == UserRole.ADMIN:
+                return redirect(url_for('course.index_view'))
 
         err_msg = "MSSV hoặc mật khẩu không chính xác"
 
