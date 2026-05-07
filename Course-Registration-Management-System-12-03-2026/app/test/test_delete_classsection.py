@@ -3,6 +3,7 @@ import pytest
 from app.model import ClassSection, Enrollment
 from app.admin import ClassSectionView
 from app.test.test_base import test_app, test_session
+from datetime import datetime
 
 
 @pytest.fixture
@@ -11,7 +12,13 @@ def test_admin():
 
 @pytest.fixture
 def sample_class_section(test_session):
-    cs1 = ClassSection(id= 1, semester="2024-1", max_students=50)
+    cs1 = ClassSection(
+        id=1,
+        semester="2024-1",
+        max_students=50,
+        start_date=datetime(2024, 1, 1),
+        end_date=datetime(2024, 5, 1),
+    )
 
     test_session.add(cs1)
     test_session.commit()

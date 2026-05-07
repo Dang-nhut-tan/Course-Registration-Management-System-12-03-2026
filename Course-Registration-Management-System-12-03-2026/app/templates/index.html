@@ -5,16 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Đăng ký môn học</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { font-family: Arial, sans-serif; }
-  </style>
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/student-pages.css') }}"
+  />
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100 student-page">
   <div class="flex items-center justify-between p-4">
     <div class="flex items-center gap-3">
       <span class="text-sm font-semibold">{{ student_code }} - {{ student_name }}</span>
     </div>
-    <a href="{{ url_for('logout') }}" class="text-red-500 text-sm hover:underline">Đăng xuất</a>
+    <label class="student-nav" aria-label="Tiện ích sinh viên">
+      <span class="student-nav__label">Tiện ích sinh viên</span>
+      <select class="student-nav__select" onchange="window.location.href=this.value">
+        <option value="{{ url_for('index') }}" selected>Đăng ký môn học</option>
+        <option value="{{ url_for('timetable') }}">Xem thời khóa biểu</option>
+        <option value="{{ url_for('logout') }}">Đăng xuất</option>
+      </select>
+    </label>
   </div>
 
 <div class="p-6">

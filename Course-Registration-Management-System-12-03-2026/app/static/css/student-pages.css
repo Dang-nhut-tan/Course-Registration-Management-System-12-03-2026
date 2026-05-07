@@ -1,0 +1,68 @@
+.student-page {
+    font-family: Arial, sans-serif;
+}
+
+.student-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.student-nav__label {
+    color: #1f6096;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.student-nav__select {
+    min-width: 220px;
+    border: 1px solid #93c5fd;
+    border-radius: 10px;
+    background-color: #ffffff;
+    color: #1f2937;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 9px 36px 9px 12px;
+}
+
+.student-nav__select:focus {
+    border-color: #1f6096;
+    box-shadow: 0 0 0 3px rgba(31, 96, 150, 0.18);
+    outline: none;
+}
+
+.side-col {
+    background-color: #1f6096;
+    color: white;
+    text-align: center;
+    font-weight: bold;
+}
+
+.theory-bg {
+    background-color: #dceaf6;
+    border: 1px solid #1f6096;
+}
+
+.practice-bg {
+    background-color: #fce8e8;
+    border: 1px solid #d9534f;
+}
+
+.timetable-table td,
+.timetable-table th {
+    border: 1px solid #e5e7eb;
+}
+
+@media (max-width: 640px) {
+    .student-nav {
+        align-items: stretch;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .student-nav__select {
+        width: 100%;
+    }
+}

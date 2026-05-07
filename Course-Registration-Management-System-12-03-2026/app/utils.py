@@ -529,7 +529,7 @@ def cancel_registered_course(student_code, enrollment_id):
     )
     credits_after_cancel = max(get_registered_credits(student_code) - canceled_credits, 0)
     if minimum_credits and credits_after_cancel < minimum_credits:
-        return False, f"Khong the huy vi sau khi huy so tin chi se nho hon {minimum_credits}."
+        return False, f"Không thể hủy vì nếu hủy sẽ có số tín chỉ nhỏ hơn {minimum_credits}."
 
     enrollment.status = EnrollmentStatus.CANCELED
 
@@ -584,7 +584,18 @@ def get_student_timetable(student_code, requested_week=1):
     training_program = get_student_training_program(student_code)
 
     if not training_program:
-        return {"schedules": [], "semester": "N/A", "week_days": [], "week": requested_week}
+        return {
+            "schedules": [],
+            "semester_no": "N/A",
+            "semester_raw": "N/A",
+            "week_days": [],
+            "week": 1,
+            "max_week": 1,
+            "can_previous_week": False,
+            "can_next_week": False,
+            "term_start": None,
+            "term_end": None,
+        }
 
     schedules = db.session.query(Schedule) \
         .join(ClassSection, Schedule.class_section_id == ClassSection.id) \
@@ -595,24 +606,43 @@ def get_student_timetable(student_code, requested_week=1):
         Enrollment.status == EnrollmentStatus.REGISTERED,
         TrainingProgramCourse.training_program_id == training_program.id,
         TrainingProgramCourse.semester_no == semester_no
-    ).all()
+    ).order_by(ClassSection.start_date, Schedule.day_of_week, Schedule.start_time).all()
 
     raw_semester = "2025-1"
     if schedules:
         raw_semester = schedules[0].class_section.semester
 
-    if schedules and schedules[0].class_section.start_date:
-        start_point = schedules[0].class_section.start_date.date()
+    if schedules:
+        term_start = min(schedule.class_section.start_date.date() for schedule in schedules)
+        term_end = max(schedule.class_section.end_date.date() for schedule in schedules)
     else:
-        start_point = datetime.now().date()
+        term_start = datetime.now().date()
+        term_end = term_start
 
-    week_start_date = start_point + timedelta(days=(requested_week - 1) * 7)
+    max_week = max(((term_end - term_start).days // 7) + 1, 1)
+    current_week = min(max(requested_week or 1, 1), max_week)
+
+    week_start_date = term_start + timedelta(days=(current_week - 1) * 7)
     week_days = [{'thu': i + 2 if i < 6 else 8, 'date': week_start_date + timedelta(days=i)} for i in range(7)]
+    week_dates_by_day = {day["thu"]: day["date"] for day in week_days}
+
+    active_schedules = []
+    for schedule in schedules:
+        class_date = week_dates_by_day.get(schedule.day_of_week)
+        section_start = schedule.class_section.start_date.date()
+        section_end = schedule.class_section.end_date.date()
+        if class_date and section_start <= class_date <= section_end:
+            active_schedules.append(schedule)
 
     return {
-        "schedules": schedules,
+        "schedules": active_schedules,
         "semester_no": semester_no,
         "semester_raw": raw_semester,
         "week_days": week_days,
-        "week": requested_week
+        "week": current_week,
+        "max_week": max_week,
+        "can_previous_week": current_week > 1,
+        "can_next_week": current_week < max_week,
+        "term_start": term_start,
+        "term_end": term_end,
     }
