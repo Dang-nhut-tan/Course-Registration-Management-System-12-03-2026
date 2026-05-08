@@ -315,6 +315,15 @@ class ScheduleView(BaseView):
         room_id = class_section.room_id
         teacher_id = class_section.teacher_id
 
+        if class_section:
+            existing_schedule = db.session.query(Schedule).filter_by(
+                class_section_id=class_section.id
+            ).first()
+
+            if existing_schedule:
+                flash(message=f"Lớp học phần '{class_section}' đã có lịch học tồn tại!", category="error")
+                return False
+
         if check_room_conflict(day, start_time, end_time, room_id):
             flash(message="Lịch học bị trùng phòng.",category="error")
             return False
