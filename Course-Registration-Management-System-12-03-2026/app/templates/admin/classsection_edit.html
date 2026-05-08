@@ -1,0 +1,6 @@
+{% extends 'admin/model/edit.html' %}
+
+{% block tail %}
+  {{ super() }}
+  {% include 'admin/classsection_filter_script.html' %}
+{% endblock %}
