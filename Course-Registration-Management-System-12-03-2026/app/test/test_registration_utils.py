@@ -1,8 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
 from app import db
 from app import utils
-from app.model import ClassSection,Course,CoursePrerequisite,Enrollment,EnrollmentStatus,Faculty,Major,Student,StudentClass,TrainingProgram,TrainingProgramCourse
+from app.model import ClassSection,Course,CoursePrerequisite,Enrollment,EnrollmentStatus,Faculty,Major,Schedule,Student,StudentClass,TrainingProgram,TrainingProgramCourse
 from app.test.test_base import test_app, test_session
 
 
@@ -149,3 +149,34 @@ def test_cancel_course_allows_below_minimum_for_graduation_semester(test_session
 
         assert success is True
         assert canceled_enrollment.status == EnrollmentStatus.CANCELED
+
+
+def test_schedule_conflict_ignores_registered_course_outside_current_semester(test_session, test_app):
+    with test_app.app_context():
+        seed_student_context(test_session)
+        old_course, old_section = add_course_with_section(
+            test_session,
+            course_id=1,
+            section_id=1,
+            semester_no=1,
+        )
+        current_course, current_section = add_course_with_section(
+            test_session,
+            course_id=2,
+            section_id=2,
+            semester_no=CURRENT_TRAINING_PROGRAM_SEMESTER,
+        )
+        test_session.add_all([
+            Schedule(class_section_id=old_section.id, day_of_week=7, start_time=time(7, 0), end_time=time(11, 30)),
+            Schedule(class_section_id=current_section.id, day_of_week=7, start_time=time(7, 0), end_time=time(11, 30)),
+            Enrollment(
+                student_code="2354050999",
+                class_section_id=old_section.id,
+                status=EnrollmentStatus.REGISTERED,
+            ),
+        ])
+        test_session.commit()
+
+        conflict = utils.get_schedule_conflict("2354050999", [current_section])
+
+        assert conflict is None

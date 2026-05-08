@@ -36,6 +36,9 @@ def login():
 
         err_msg = "MSSV hoặc mật khẩu không chính xác"
 
+    if err_msg:
+        err_msg = "MSSV hoặc mật khẩu không chính xác"
+
     return render_template("login.html", err_msg=err_msg)
 
 

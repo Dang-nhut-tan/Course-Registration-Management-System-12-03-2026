@@ -65,6 +65,11 @@ class Room(BaseModel):
     capacity = Column(Integer)
     campus_id = Column(Integer, ForeignKey("campuses.id"), nullable=False)
 
+    def __str__(self):
+        if self.campus:
+            return f"{self.name} - {self.campus.name}"
+        return self.name
+
 
 class Faculty(BaseModel):
     __tablename__ = "faculties"
@@ -125,7 +130,7 @@ class Course(BaseModel):
     name = Column(String(255), nullable=False)
     credits = Column(Integer, nullable=False)
     is_shared = Column(Boolean, default=False)
-    faculty_id = Column(Integer, ForeignKey("faculties.id"))
+    faculty_id = Column(Integer, ForeignKey("faculties.id"), nullable=False)
 
     faculty = relationship("Faculty", backref="courses")
 
@@ -142,6 +147,9 @@ class CoursePrerequisite(db.Model):
 
     course_id = Column(Integer, ForeignKey("courses.id"), primary_key=True)
     prerequisite_id = Column(Integer, ForeignKey("courses.id"), primary_key=True)
+
+    course = relationship("Course", foreign_keys=[course_id])
+    prerequisite = relationship("Course", foreign_keys=[prerequisite_id])
 
 
 class Teacher(BaseModel):

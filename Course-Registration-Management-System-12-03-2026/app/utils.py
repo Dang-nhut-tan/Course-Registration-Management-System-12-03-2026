@@ -35,7 +35,20 @@ def check_room_conflict(day, start_time, end_time, room_id):
         Schedule.day_of_week==day,
         Schedule.start_time < end_time,
         Schedule.end_time > start_time,
-        ClassSection.room_id == room_id
+        ClassSection.room_id == room_id,
+        ClassSection.end_date >= datetime.now(),
+    )
+    if query.first():
+        return True
+    return False
+
+def check_teacher_conflict(day, start_time, end_time, teacher_id):
+    query = db.session.query(Schedule).join(ClassSection).filter(
+        Schedule.day_of_week == day,
+        Schedule.start_time < end_time,
+        Schedule.end_time > start_time,
+        ClassSection.teacher_id == teacher_id,
+        ClassSection.end_date >= datetime.now(),
     )
     if query.first():
         return True
@@ -272,7 +285,7 @@ def get_current_training_program_credit_load(student_code):
 def get_minimum_credits_to_enforce(student_code):
     current_credit_load = get_current_training_program_credit_load(student_code)
 
-    # Hoc ky cuoi co tong so tin chi theo CTDT <= 12 thi khong ep moc toi thieu 12 tin.
+    # H?c k? cu?i c? t?ng s? t?n ch? theo CT?T <= 12 th? kh?ng ?p m?c t?i thi?u 12 t?n.
     if current_credit_load is not None and current_credit_load <= MIN_CREDITS_PER_SEMESTER:
         return 0
 
@@ -353,7 +366,20 @@ def get_schedule_conflict(student_code, candidate_sections):
     ).filter(
         Enrollment.student_code == student_code,
         Enrollment.status == EnrollmentStatus.REGISTERED
-    ).all()
+    )
+
+    training_program = get_student_training_program(student_code)
+    current_semester = get_current_training_program_semester(student_code)
+    if training_program and current_semester:
+        registered_sections = registered_sections.join(
+            TrainingProgramCourse,
+            TrainingProgramCourse.course_id == ClassSection.course_id,
+        ).filter(
+            TrainingProgramCourse.training_program_id == training_program.id,
+            TrainingProgramCourse.semester_no == current_semester,
+        )
+
+    registered_sections = registered_sections.all()
 
     for candidate_section in candidate_sections:
         for registered_section in registered_sections:
@@ -486,7 +512,7 @@ def register_section(student_code, class_section_id):
 
         db.session.commit()
         if section.linked_section_id:
-            return True, "Đăng ký môn học thành công. Hệ thống đã tự động gán lớp thực hành tương ứng."
+            return True, "Đăng ký môn học thành công. Hệ thống đã tự động gắn lớp thực hành tương ứng."
         return True, "Đăng ký môn học thành công."
     except Exception:
         db.session.rollback()
@@ -503,7 +529,7 @@ def cancel_registered_course(student_code, enrollment_id):
         return False, "Không tìm thấy môn đã đăng ký."
 
     if enrollment.student_code != student_code:
-        return False, "Bạn không có quyền hủy môn học cua sinh viên khác."
+        return False, "Bạn không có quyền hủy môn học của sinh viên khác."
 
     if enrollment.status == EnrollmentStatus.CANCELED:
         return False, "Môn học này đã được hủy trước đó."
@@ -546,7 +572,7 @@ def cancel_registered_course(student_code, enrollment_id):
     db.session.commit()
     return True, "Hủy môn học thành công."
 
-
+    return True, "Hủy môn học thành công."
 def is_course_allowed(student_code, course):
     student, student_class_code, major_id = get_student_context(student_code)
     if student and student.class_id:
