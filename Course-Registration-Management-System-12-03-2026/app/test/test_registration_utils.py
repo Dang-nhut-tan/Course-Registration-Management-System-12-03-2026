@@ -46,6 +46,7 @@ def add_course_with_section(
     semester_no=CURRENT_TRAINING_PROGRAM_SEMESTER,
     start_offset_days=-5,
     end_offset_days=30,
+    registration_start_offset_days=-7,
 ):
     course = Course(
         id=course_id,
@@ -62,6 +63,7 @@ def add_course_with_section(
         max_students=50,
         start_date=datetime.now() + timedelta(days=start_offset_days),
         end_date=datetime.now() + timedelta(days=end_offset_days),
+        registration_start_date=datetime.now() + timedelta(days=registration_start_offset_days),
         registration_deadline=datetime.now() + timedelta(days=7),
     )
     training_program_course = TrainingProgramCourse(
@@ -100,6 +102,58 @@ def test_prerequisite_requires_completed_course(test_session, test_app):
         success, message = utils.register_section("2354050999", 2)
 
         assert success is False
+
+
+def test_register_section_blocks_after_registration_deadline(test_session, test_app):
+    with test_app.app_context():
+        seed_student_context(test_session)
+        course, section = add_course_with_section(test_session, course_id=1, section_id=1)
+        section.registration_deadline = datetime.now() - timedelta(days=1)
+        test_session.commit()
+
+        success, message = utils.register_section("2354050999", section.id)
+
+        assert success is False
+        assert "quá hạn đăng ký" in message
+        assert Enrollment.query.filter_by(
+            student_code="2354050999",
+            class_section_id=section.id,
+        ).count() == 0
+
+
+def test_register_section_blocks_before_registration_start_date(test_session, test_app):
+    with test_app.app_context():
+        seed_student_context(test_session)
+        course, section = add_course_with_section(
+            test_session,
+            course_id=1,
+            section_id=1,
+            registration_start_offset_days=1,
+        )
+
+        success, message = utils.register_section("2354050999", section.id)
+
+        assert success is False
+        assert "Chưa tới ngày" in message
+        assert Enrollment.query.filter_by(
+            student_code="2354050999",
+            class_section_id=section.id,
+        ).count() == 0
+
+
+def test_get_sections_hides_before_registration_start_date(test_session, test_app):
+    with test_app.app_context():
+        seed_student_context(test_session)
+        course, section = add_course_with_section(
+            test_session,
+            course_id=1,
+            section_id=1,
+            registration_start_offset_days=1,
+        )
+
+        sections = utils.get_sections("2354050999")
+
+        assert section not in sections
 
 
 def test_cancel_course_blocks_when_falling_below_minimum_credits(test_session, test_app):

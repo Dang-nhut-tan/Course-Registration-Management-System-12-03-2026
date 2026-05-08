@@ -3,6 +3,7 @@ import hashlib
 from app import app, db
 from flask_login import LoginManager
 from datetime import datetime, timedelta
+from sqlalchemy import or_
 from app.model import ClassSection, ClassSectionType, Course, CourseMajor, CoursePrerequisite, Enrollment, EnrollmentStatus, Faculty, Major, Schedule, Student, StudentClassSection, TrainingProgram, TrainingProgramCourse, User, UserRole
 
 MIN_CREDITS_PER_SEMESTER = 12
@@ -167,7 +168,14 @@ def get_student_faculty_id(student_code):
 
 
 def get_sections(student_code, course_id=None, faculty_id=None, training_program_semester=None):
-    query = ClassSection.query.filter(ClassSection.section_type == ClassSectionType.THEORY)
+    now = datetime.now()
+    query = ClassSection.query.filter(
+        ClassSection.section_type == ClassSectionType.THEORY,
+        or_(
+            ClassSection.registration_start_date.is_(None),
+            ClassSection.registration_start_date <= now,
+        ),
+    )
     allowed_course_ids = get_allowed_course_ids(student_code, training_program_semester)
 
     if not allowed_course_ids:
@@ -187,9 +195,14 @@ def get_open_filter_options(student_code, training_program_semester=None):
     if not allowed_course_ids:
         return [], []
 
+    now = datetime.now()
     open_sections_query = db.session.query(ClassSection.course_id).filter(
         ClassSection.section_type == ClassSectionType.THEORY,
         ClassSection.course_id.in_(allowed_course_ids),
+        or_(
+            ClassSection.registration_start_date.is_(None),
+            ClassSection.registration_start_date <= now,
+        ),
     ).distinct()
 
     open_course_ids = [course_id for course_id, in open_sections_query.all()]
@@ -285,7 +298,7 @@ def get_current_training_program_credit_load(student_code):
 def get_minimum_credits_to_enforce(student_code):
     current_credit_load = get_current_training_program_credit_load(student_code)
 
-    # H?c k? cu?i c? t?ng s? t?n ch? theo CT?T <= 12 th? kh?ng ?p m?c t?i thi?u 12 t?n.
+    # Học kỳ cuối có tổng số tín chỉ theo CTĐT <= 12 thì không áp mức tối thiểu 12 tín.
     if current_credit_load is not None and current_credit_load <= MIN_CREDITS_PER_SEMESTER:
         return 0
 
@@ -428,6 +441,10 @@ def register_section(student_code, class_section_id):
             return False, "Không tìm thấy lớp học phần."
         if section.section_type != ClassSectionType.THEORY:
             return False, "Vui lòng chọn lớp lý thuyết để đăng ký."
+        if section.registration_start_date and datetime.now() < section.registration_start_date:
+            return False, "Chưa tới ngày bắt đầu đăng ký môn học."
+        if section.registration_deadline and datetime.now() > section.registration_deadline:
+            return False, "Đã quá hạn đăng ký môn học."
         if not is_course_allowed(student_code, section.course):
             return False, "Môn học không thuộc chương trình đào tạo của lớp bạn."
 
@@ -634,7 +651,7 @@ def get_student_timetable(student_code, requested_week=1):
         TrainingProgramCourse.semester_no == semester_no
     ).order_by(ClassSection.start_date, Schedule.day_of_week, Schedule.start_time).all()
 
-    raw_semester = "2025-1"
+    raw_semester = "2026-1"
     if schedules:
         raw_semester = schedules[0].class_section.semester
 
