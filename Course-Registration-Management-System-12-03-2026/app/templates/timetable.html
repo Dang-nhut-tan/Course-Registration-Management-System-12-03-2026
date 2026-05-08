@@ -5,29 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Thời khóa biểu cá nhân</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .side-col {
-            background-color: #1f6096;
-            color: white;
-            text-align: center;
-            font-weight: bold;
-        }
-
-        .theory-bg {
-            background-color: #dceaf6;
-            border: 1px solid #1f6096;
-        }
-
-        .practice-bg {
-            background-color: #fce8e8;
-            border: 1px solid #d9534f;
-        }
-        table td, table th {
-            border: 1px solid #e5e7eb;
-        }
-    </style>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/student-pages.css') }}"
+    />
 </head>
-<body class="bg-gray-50 font-sans min-h-screen">
+<body class="bg-gray-50 student-page min-h-screen">
 
   <div class="max-w-7xl mx-auto p-6">
 
@@ -39,17 +22,35 @@
         </div>
 
         <div class="flex flex-col items-end gap-3">
+            <label class="student-nav" aria-label="Tiện ích sinh viên">
+              <span class="student-nav__label">Tiện ích sinh viên</span>
+              <select class="student-nav__select" onchange="window.location.href=this.value">
+                <option value="{{ url_for('index') }}">Đăng ký môn học</option>
+                <option value="{{ url_for('timetable') }}" selected>Xem thời khóa biểu</option>
+                <option value="{{ url_for('logout') }}">Đăng xuất</option>
+              </select>
+            </label>
             <div class="flex items-center gap-4 bg-gray-100 p-1 rounded-lg shadow-inner">
+                {% if can_previous_week %}
                 <a href="{{ url_for('timetable', week=week-1) }}" class="px-3 py-1 hover:bg-white rounded shadow-sm transition">Tuần trước</a>
+                {% else %}
+                <span class="px-3 py-1 text-gray-400 cursor-not-allowed">Tuần trước</span>
+                {% endif %}
                 <span class="font-bold text-blue-700 px-4">TUẦN {{ week }}</span>
+                {% if can_next_week %}
                 <a href="{{ url_for('timetable', week=week+1) }}" class="px-3 py-1 hover:bg-white rounded shadow-sm transition">Tuần sau</a>
+                {% else %}
+                <span class="px-3 py-1 text-gray-400 cursor-not-allowed">Tuần sau</span>
+                {% endif %}
             </div>
-            <a href="{{ url_for('index') }}" class="text-sm text-blue-600 hover:underline">Quay về trang đăng ký</a>
+            <p class="text-xs text-gray-500">
+              Thời gian học: {{ term_start.strftime('%d/%m/%Y') if term_start else '-' }} - {{ term_end.strftime('%d/%m/%Y') if term_end else '-' }}
+            </p>
         </div>
     </div>
 
     <div class="overflow-x-auto bg-white shadow-xl rounded-lg border border-gray-300">
-      <table class="w-full border-collapse text-sm min-w-[1000px]">
+      <table class="timetable-table w-full border-collapse text-sm min-w-[1000px]">
         <thead>
             <tr class="bg-white text-gray-800 border-b-2 border-blue-800">
                 <th class="w-20 p-3 side-col">Tiết</th>
@@ -98,6 +99,9 @@
                             <div class="font-bold text-blue-900 text-[10px] uppercase leading-tight mb-1">
                                 {{ s.class_section.course.name }}
                             </div>
+                            <div class="text-[10px] font-semibold {{ 'text-blue-700' if not is_practice else 'text-emerald-700' }}">
+                                {{ 'Lý thuyết' if not is_practice else 'Thực hành' }}
+                            </div>
                             <div class="text-[10px] text-gray-800 italic">Nhóm: {{ s.class_section.name }}</div>
                             <div class="text-[10px] text-gray-800 mt-1 font-semibold">Phòng: {{ s.class_section.room.name }}</div>
                             <div class="text-[10px] text-gray-600 mt-auto pt-1 border-t border-blue-200/50"> Giảng viên: {{ s.class_section.teacher.name }}
@@ -122,8 +126,9 @@
     </div>
   </div>
 
-  <footer class="text-center text-xs text-gray-400 py-8">
+  <footer class="text-center text-sm text-gray-500 my-4">
     <p>2024 Phòng Đào tạo - Đại học Mở</p>
+    <p class="mt-1">Chính sách bảo mật • Điều khoản sử dụng</p>
   </footer>
 </body>
 </html>

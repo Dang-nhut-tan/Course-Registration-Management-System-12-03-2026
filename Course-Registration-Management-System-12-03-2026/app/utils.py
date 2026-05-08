@@ -35,7 +35,20 @@ def check_room_conflict(day, start_time, end_time, room_id):
         Schedule.day_of_week==day,
         Schedule.start_time < end_time,
         Schedule.end_time > start_time,
-        ClassSection.room_id == room_id
+        ClassSection.room_id == room_id,
+        ClassSection.end_date >= datetime.now(),
+    )
+    if query.first():
+        return True
+    return False
+
+def check_teacher_conflict(day, start_time, end_time, teacher_id):
+    query = db.session.query(Schedule).join(ClassSection).filter(
+        Schedule.day_of_week == day,
+        Schedule.start_time < end_time,
+        Schedule.end_time > start_time,
+        ClassSection.teacher_id == teacher_id,
+        ClassSection.end_date >= datetime.now(),
     )
     if query.first():
         return True
@@ -191,6 +204,7 @@ def get_open_filter_options(student_code, training_program_semester=None):
     ).distinct().order_by(Faculty.name).all()
     return courses, faculties
 
+
 def get_current_training_program_semester(student_code):
     return get_default_training_program_semester(student_code)
 
@@ -212,14 +226,11 @@ def get_registered_courses(student_code):
             TrainingProgramCourse.training_program_id == training_program.id,
             TrainingProgramCourse.semester_no == current_semester,
         )
-    training_program = get_student_training_program(student_code)
-    current_semester = get_current_training_program_semester(student_code)
 
     return query.all()
 
 
 def get_registered_credits(student_code):
-    #Thay Enrollment.query = db.session.query(Enrollment)
     enrollments = Enrollment.query.join(
         ClassSection, Enrollment.class_section_id == ClassSection.id
     ).join(
@@ -274,7 +285,7 @@ def get_current_training_program_credit_load(student_code):
 def get_minimum_credits_to_enforce(student_code):
     current_credit_load = get_current_training_program_credit_load(student_code)
 
-    # Hoc ky cuoi co tong so tin chi theo CTDT <= 12 thi khong ep moc toi thieu 12 tin.
+    # H?c k? cu?i c? t?ng s? t?n ch? theo CT?T <= 12 th? kh?ng ?p m?c t?i thi?u 12 t?n.
     if current_credit_load is not None and current_credit_load <= MIN_CREDITS_PER_SEMESTER:
         return 0
 
@@ -355,7 +366,20 @@ def get_schedule_conflict(student_code, candidate_sections):
     ).filter(
         Enrollment.student_code == student_code,
         Enrollment.status == EnrollmentStatus.REGISTERED
-    ).all()
+    )
+
+    training_program = get_student_training_program(student_code)
+    current_semester = get_current_training_program_semester(student_code)
+    if training_program and current_semester:
+        registered_sections = registered_sections.join(
+            TrainingProgramCourse,
+            TrainingProgramCourse.course_id == ClassSection.course_id,
+        ).filter(
+            TrainingProgramCourse.training_program_id == training_program.id,
+            TrainingProgramCourse.semester_no == current_semester,
+        )
+
+    registered_sections = registered_sections.all()
 
     for candidate_section in candidate_sections:
         for registered_section in registered_sections:
@@ -488,7 +512,7 @@ def register_section(student_code, class_section_id):
 
         db.session.commit()
         if section.linked_section_id:
-            return True, "Đăng ký môn học thành công. Hệ thống đã tự động gán lớp thực hành tương ứng."
+            return True, "Đăng ký môn học thành công. Hệ thống đã tự động gắn lớp thực hành tương ứng."
         return True, "Đăng ký môn học thành công."
     except Exception:
         db.session.rollback()
@@ -505,7 +529,7 @@ def cancel_registered_course(student_code, enrollment_id):
         return False, "Không tìm thấy môn đã đăng ký."
 
     if enrollment.student_code != student_code:
-        return False, "Bạn không có quyền hủy môn học cua sinh viên khác."
+        return False, "Bạn không có quyền hủy môn học của sinh viên khác."
 
     if enrollment.status == EnrollmentStatus.CANCELED:
         return False, "Môn học này đã được hủy trước đó."
@@ -531,7 +555,7 @@ def cancel_registered_course(student_code, enrollment_id):
     )
     credits_after_cancel = max(get_registered_credits(student_code) - canceled_credits, 0)
     if minimum_credits and credits_after_cancel < minimum_credits:
-        return False, f"Khong the huy vi sau khi huy so tin chi se nho hon {minimum_credits}."
+        return False, f"Không thể hủy vì nếu hủy sẽ có số tín chỉ nhỏ hơn {minimum_credits}."
 
     enrollment.status = EnrollmentStatus.CANCELED
 
@@ -548,7 +572,7 @@ def cancel_registered_course(student_code, enrollment_id):
     db.session.commit()
     return True, "Hủy môn học thành công."
 
-
+    return True, "Hủy môn học thành công."
 def is_course_allowed(student_code, course):
     student, student_class_code, major_id = get_student_context(student_code)
     if student and student.class_id:
@@ -580,14 +604,24 @@ def get_filter_data(student_code, faculty_id=None, training_program_semester=Non
         "training_program_semesters": get_available_training_program_semesters(student_code),
     }
 
-#==========================================================
 def get_student_timetable(student_code, requested_week=1):
     semester_no = get_current_training_program_semester(student_code)
 
     training_program = get_student_training_program(student_code)
 
     if not training_program:
-        return {"schedules": [], "semester": "N/A", "week_days": [], "week": requested_week}
+        return {
+            "schedules": [],
+            "semester_no": "N/A",
+            "semester_raw": "N/A",
+            "week_days": [],
+            "week": 1,
+            "max_week": 1,
+            "can_previous_week": False,
+            "can_next_week": False,
+            "term_start": None,
+            "term_end": None,
+        }
 
     schedules = db.session.query(Schedule) \
         .join(ClassSection, Schedule.class_section_id == ClassSection.id) \
@@ -598,24 +632,43 @@ def get_student_timetable(student_code, requested_week=1):
         Enrollment.status == EnrollmentStatus.REGISTERED,
         TrainingProgramCourse.training_program_id == training_program.id,
         TrainingProgramCourse.semester_no == semester_no
-    ).all()
+    ).order_by(ClassSection.start_date, Schedule.day_of_week, Schedule.start_time).all()
 
     raw_semester = "2025-1"
     if schedules:
         raw_semester = schedules[0].class_section.semester
 
-    if schedules and schedules[0].class_section.start_date:
-        start_point = schedules[0].class_section.start_date.date()
+    if schedules:
+        term_start = min(schedule.class_section.start_date.date() for schedule in schedules)
+        term_end = max(schedule.class_section.end_date.date() for schedule in schedules)
     else:
-        start_point = datetime.now().date()
+        term_start = datetime.now().date()
+        term_end = term_start
 
-    week_start_date = start_point + timedelta(days=(requested_week - 1) * 7)
+    max_week = max(((term_end - term_start).days // 7) + 1, 1)
+    current_week = min(max(requested_week or 1, 1), max_week)
+
+    week_start_date = term_start + timedelta(days=(current_week - 1) * 7)
     week_days = [{'thu': i + 2 if i < 6 else 8, 'date': week_start_date + timedelta(days=i)} for i in range(7)]
+    week_dates_by_day = {day["thu"]: day["date"] for day in week_days}
+
+    active_schedules = []
+    for schedule in schedules:
+        class_date = week_dates_by_day.get(schedule.day_of_week)
+        section_start = schedule.class_section.start_date.date()
+        section_end = schedule.class_section.end_date.date()
+        if class_date and section_start <= class_date <= section_end:
+            active_schedules.append(schedule)
 
     return {
-        "schedules": schedules,
+        "schedules": active_schedules,
         "semester_no": semester_no,
         "semester_raw": raw_semester,
         "week_days": week_days,
-        "week": requested_week
+        "week": current_week,
+        "max_week": max_week,
+        "can_previous_week": current_week > 1,
+        "can_next_week": current_week < max_week,
+        "term_start": term_start,
+        "term_end": term_end,
     }
