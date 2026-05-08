@@ -145,8 +145,8 @@ class CourseMajor(db.Model):
 class CoursePrerequisite(db.Model):
     __tablename__ = "course_prerequisite"
 
-    course_id = Column(Integer, ForeignKey("courses.id"), primary_key=True)
-    prerequisite_id = Column(Integer, ForeignKey("courses.id"), primary_key=True)
+    course_id = Column(Integer, ForeignKey("courses.id"), primary_key=True, nullable=False)
+    prerequisite_id = Column(Integer, ForeignKey("courses.id"), primary_key=True, nullable=False)
 
     course = relationship("Course", foreign_keys=[course_id])
     prerequisite = relationship("Course", foreign_keys=[prerequisite_id])
