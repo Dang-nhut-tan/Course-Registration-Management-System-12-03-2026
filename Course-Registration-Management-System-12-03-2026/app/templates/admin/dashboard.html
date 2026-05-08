@@ -124,6 +124,7 @@
   .chart-bar {
     background: #2563eb;
     height: 100%;
+    width: 0;
   }
 
   @media (max-width: 900px) {
@@ -214,7 +215,7 @@
       <div class="chart-row">
         <div>{{ row.label }}</div>
         <div class="chart-bar-wrap">
-          <div class="chart-bar" style="width: {{ row.width }}%;"></div>
+          <div class="chart-bar" data-width="{{ row.width }}"></div>
         </div>
         <div>{{ row.count }}</div>
       </div>
@@ -224,4 +225,10 @@
     {% endif %}
   </div>
 </div>
+
+<script>
+  document.querySelectorAll(".chart-bar[data-width]").forEach(function (bar) {
+    bar.style.width = bar.dataset.width + "%";
+  });
+</script>
 {% endblock %}

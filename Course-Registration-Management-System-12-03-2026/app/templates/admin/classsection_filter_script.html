@@ -1,0 +1,4 @@
+<script id="classsection-filter-data" type="application/json">
+  {{ admin_view.get_filter_data_for_form() | tojson }}
+</script>
+<script src="{{ url_for('static', filename='js/classsection-filter.js') }}"></script>
