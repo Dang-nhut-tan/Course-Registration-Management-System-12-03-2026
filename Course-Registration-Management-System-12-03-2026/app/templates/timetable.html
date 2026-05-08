@@ -99,6 +99,9 @@
                             <div class="font-bold text-blue-900 text-[10px] uppercase leading-tight mb-1">
                                 {{ s.class_section.course.name }}
                             </div>
+                            <div class="text-[10px] font-semibold {{ 'text-blue-700' if not is_practice else 'text-emerald-700' }}">
+                                {{ 'Lý thuyết' if not is_practice else 'Thực hành' }}
+                            </div>
                             <div class="text-[10px] text-gray-800 italic">Nhóm: {{ s.class_section.name }}</div>
                             <div class="text-[10px] text-gray-800 mt-1 font-semibold">Phòng: {{ s.class_section.room.name }}</div>
                             <div class="text-[10px] text-gray-600 mt-auto pt-1 border-t border-blue-200/50"> Giảng viên: {{ s.class_section.teacher.name }}
@@ -123,8 +126,9 @@
     </div>
   </div>
 
-  <footer class="text-center text-xs text-gray-400 py-8">
+  <footer class="text-center text-sm text-gray-500 my-4">
     <p>2024 Phòng Đào tạo - Đại học Mở</p>
+    <p class="mt-1">Chính sách bảo mật • Điều khoản sử dụng</p>
   </footer>
 </body>
 </html>

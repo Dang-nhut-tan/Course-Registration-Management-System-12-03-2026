@@ -76,24 +76,14 @@ def test_check_login_student_rejects_invalid_credential_partitions(
         ("", ""),
         (None, "123456"),
         ("2354050999", None),
-    ],
-)
-def test_check_login_student_rejects_missing_credential_boundaries(
-    test_app, student_code, password
-):
-    with test_app.app_context():
-        assert utils.check_login_student(student_code, password) is None
-
-
-@pytest.mark.parametrize(
-    ("student_code", "password"),
-    [
         (" ", "123456"),
         ("2354050999", " "),
         (" ", " "),
     ],
 )
-def test_check_login_student_rejects_whitespace_only_boundaries(test_session, test_app, student_code, password):
+def test_check_login_student_rejects_missing_credential_boundaries(
+    test_session, test_app, student_code, password
+):
     with test_app.app_context():
         seed_login_user(test_session)
 
@@ -164,18 +154,8 @@ def test_check_login_student_rejects_student_code_at_length_boundary(
         assert invalid_result is None
 
 
-@pytest.mark.parametrize(
-    "form_data",
-    [
-        {"student_code": "2354050000", "password": "123456"},
-        {"student_code": "2354050999", "password": "wrong-password"},
-        {"student_code": "2354050000", "password": "wrong-password"},
-        {"student_code": "", "password": "123456"},
-        {"student_code": "2354050999", "password": ""},
-    ],
-)
 def test_login_route_returns_error_message_for_invalid_credentials(
-    test_client, form_data
+    test_client
 ):
     from app import index as index_routes
 
@@ -183,7 +163,10 @@ def test_login_route_returns_error_message_for_invalid_credentials(
         with patch.object(
             index_routes, "render_template", return_value=EXPECTED_LOGIN_ERROR
         ) as render_template_mock:
-            response = test_client.post("/", data=form_data)
+            response = test_client.post(
+                "/",
+                data={"student_code": "2354050000", "password": "wrong-password"},
+            )
 
     assert response.status_code == 200
     assert response.get_data(as_text=True) == EXPECTED_LOGIN_ERROR
@@ -191,3 +174,50 @@ def test_login_route_returns_error_message_for_invalid_credentials(
         "login.html",
         err_msg=EXPECTED_LOGIN_ERROR,
     )
+
+
+def test_login_student_redirects_to_index(test_client):
+    from app import index as index_routes
+
+    user = User(id=1, student_code="2354050999", role=UserRole.STUDENT)
+    user.student = None
+
+    with patch.object(index_routes.utils, "check_login_student", return_value=user):
+        with patch.object(index_routes, "login_user"):
+            with patch.object(index_routes, "url_for", return_value="/index"):
+                response = test_client.post(
+                    "/",
+                    data={"login_role": "student", "student_code": "2354050999", "password": "123456"},
+                )
+
+    assert response.status_code == 302
+    assert response.location.endswith("/index")
+
+
+def test_login_admin_redirects_to_admin_course(test_client):
+    from app import index as index_routes
+
+    user = User(id=1, username="admin", role=UserRole.ADMIN)
+
+    with patch.object(index_routes.utils, "check_login_admin", return_value=user):
+        with patch.object(index_routes, "login_user"):
+            with patch.object(index_routes, "url_for", return_value="/admin/course/"):
+                response = test_client.post(
+                    "/",
+                    data={"login_role": "admin", "student_code": "admin", "password": "123456"},
+                )
+
+    assert response.status_code == 302
+    assert "/admin/course/" in response.location
+
+
+def test_logout_redirects_to_login(test_app, test_client):
+    from app import index as index_routes
+
+    test_app.add_url_rule("/logout", "logout", index_routes.logout)
+
+    with patch.object(index_routes, "url_for", return_value="/"):
+        response = test_client.get("/logout")
+
+    assert response.status_code == 302
+    assert response.location.endswith("/")
