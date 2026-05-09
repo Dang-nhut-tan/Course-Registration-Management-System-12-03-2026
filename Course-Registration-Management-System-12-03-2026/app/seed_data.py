@@ -127,6 +127,8 @@ sample_data = {
         {"id": 78, "name": "Kế toán tài chính 1", "credits": 3, "faculty_id": 2, "is_shared": False},
         {"id": 79, "name": "Quản trị nhân lực", "credits": 3, "faculty_id": 3, "is_shared": True},
         {"id": 82, "name": "Lập kế hoạc kinh doanh", "credits": 3, "faculty_id": 3, "is_shared": False},
+        {"id": 80, "name": "Quan tri chuoi cung ung", "credits": 3, "faculty_id": 3, "is_shared": False},
+        {"id": 81, "name": "Quan tri Marketing", "credits": 3, "faculty_id": 3, "is_shared": True},
     ],
     "course_majors": [
         {"course_id": 1, "major_id": 1},
