@@ -3,7 +3,7 @@ import hashlib
 from app import app, db
 from flask_login import LoginManager
 from datetime import datetime, timedelta
-from sqlalchemy import or_
+from sqlalchemy import String, or_
 from app.model import ClassSection, ClassSectionType, Course, CourseMajor, CoursePrerequisite, Enrollment, EnrollmentStatus, Faculty, Major, Schedule, Student, StudentClassSection, TrainingProgram, TrainingProgramCourse, User, UserRole
 
 MIN_CREDITS_PER_SEMESTER = 12
@@ -154,6 +154,135 @@ def get_allowed_course_ids(student_code, training_program_semester=None):
     return list({*major_course_ids, *shared_course_ids})
 
 
+def get_student_program_course_ids(student_code):
+    training_program = get_student_training_program(student_code)
+    if training_program:
+        course_ids = [
+            item.course_id
+            for item in TrainingProgramCourse.query.filter_by(
+                training_program_id=training_program.id
+            ).all()
+        ]
+        shared_course_ids = [
+            course_id
+            for course_id, in db.session.query(Course.id).filter(Course.is_shared.is_(True)).all()
+        ]
+        return list({*course_ids, *shared_course_ids})
+
+    return get_allowed_course_ids(student_code)
+
+
+def is_current_training_program_semester(student_code, training_program_semester=None):
+    current_semester = get_current_training_program_semester(student_code)
+    if not current_semester:
+        return False
+    return str(training_program_semester or current_semester) == str(current_semester)
+
+
+def get_current_open_semester(student_code):
+    training_program = get_student_training_program(student_code)
+    current_semester = get_current_training_program_semester(student_code)
+
+    if training_program and current_semester:
+        mapped_semester = db.session.query(ClassSection.semester).join(
+            TrainingProgramCourse,
+            TrainingProgramCourse.course_id == ClassSection.course_id,
+        ).filter(
+            TrainingProgramCourse.training_program_id == training_program.id,
+            TrainingProgramCourse.semester_no == current_semester,
+            ClassSection.section_type == ClassSectionType.THEORY,
+            ClassSection.semester.isnot(None),
+        ).order_by(ClassSection.start_date.desc()).first()
+        if mapped_semester:
+            return mapped_semester[0]
+
+    latest_semester = db.session.query(ClassSection.semester).filter(
+        ClassSection.section_type == ClassSectionType.THEORY,
+        ClassSection.semester.isnot(None),
+    ).order_by(ClassSection.start_date.desc()).first()
+    return latest_semester[0] if latest_semester else None
+
+
+def is_current_open_section(student_code, section):
+    current_open_semester = get_current_open_semester(student_code)
+    return (
+        section is not None
+        and current_open_semester is not None
+        and section.semester == current_open_semester
+    )
+
+
+def is_course_in_student_major(student_code, course):
+    student, student_class_code, major_id = get_student_context(student_code)
+    if not course or major_id is None:
+        return False
+    training_program = get_student_training_program(student_code)
+    if training_program and TrainingProgramCourse.query.filter_by(
+        training_program_id=training_program.id,
+        course_id=course.id,
+    ).first():
+        return True
+    if course.is_shared:
+        return True
+    return CourseMajor.query.filter_by(
+        course_id=course.id,
+        major_id=major_id,
+    ).first() is not None
+
+
+def is_course_in_current_training_program_semester(student_code, course_id):
+    current_semester = get_current_training_program_semester(student_code)
+    training_program = get_student_training_program(student_code)
+
+    if training_program and current_semester:
+        return TrainingProgramCourse.query.filter_by(
+            training_program_id=training_program.id,
+            course_id=course_id,
+            semester_no=current_semester,
+        ).first() is not None
+
+    return course_id in get_allowed_course_ids(student_code)
+
+
+def is_course_registrable_for_student(student_code, course):
+    if not course:
+        return False
+    if course.is_shared:
+        return True
+    return course.id in get_student_program_course_ids(student_code)
+
+
+def get_section_registration_block_reason(student_code, section):
+    if not section:
+        return "Không tìm thấy lớp học phần."
+    if section.section_type != ClassSectionType.THEORY:
+        return "Vui lòng chọn lớp lý thuyết để đăng ký."
+    if not is_current_open_section(student_code, section):
+        return "Không thuộc học kỳ hiện tại."
+    if not is_course_registrable_for_student(student_code, section.course):
+        return "Không thuộc ngành của bạn."
+
+    registration_start_date = get_section_registration_start_date(section)
+    registration_deadline = get_section_registration_deadline(section)
+    now = datetime.now()
+    if registration_start_date and now < registration_start_date:
+        return "Chưa tới ngày bắt đầu đăng ký môn học."
+    if registration_deadline and now > registration_deadline:
+        return "Đã quá hạn đăng ký môn học."
+
+    is_valid, missing_courses = check_prerequisite_courses(student_code, section.course_id)
+    if not is_valid:
+        return "Thiếu tiên quyết: " + ", ".join(missing_courses)
+
+    credit_limit = get_credit_limit_per_semester(student_code)
+    current_credits = get_registered_credits(student_code)
+    section_credits = section.course.credits or 0
+    if current_credits + section_credits > credit_limit:
+        return f"Vượt giới hạn {credit_limit} tín chỉ trong 1 kỳ."
+
+    return None
+
+
 def get_student_faculty_id(student_code):
     student, student_class_code, major_id = get_student_context(student_code)
     if not student:
@@ -167,45 +296,83 @@ def get_student_faculty_id(student_code):
     return None
 
 
-def get_sections(student_code, course_id=None, faculty_id=None, training_program_semester=None):
-    now = datetime.now()
+def get_section_registration_start_date(section):
+    faculty = section.course.faculty if section and section.course else None
+    if faculty and faculty.registration_start_date:
+        return faculty.registration_start_date
+    return None
+
+
+def get_section_registration_deadline(section):
+    faculty = section.course.faculty if section and section.course else None
+    if faculty and faculty.registration_deadline:
+        return faculty.registration_deadline
+    return None
+
+
+def is_section_open_for_registration(section, now=None):
+    now = now or datetime.now()
+    start_date = get_section_registration_start_date(section)
+    deadline = get_section_registration_deadline(section)
+    if start_date and now < start_date:
+        return False
+    if deadline and now > deadline:
+        return False
+    return True
+
+
+def get_sections(student_code, course_query=None, faculty_id=None, training_program_semester=None):
     query = ClassSection.query.filter(
         ClassSection.section_type == ClassSectionType.THEORY,
-        or_(
-            ClassSection.registration_start_date.is_(None),
-            ClassSection.registration_start_date <= now,
-        ),
     )
-    allowed_course_ids = get_allowed_course_ids(student_code, training_program_semester)
+    current_open_semester = get_current_open_semester(student_code)
+    allowed_course_ids = (
+        get_student_program_course_ids(student_code)
+        if course_query
+        else get_allowed_course_ids(student_code, training_program_semester)
+    )
 
     if not allowed_course_ids:
         return []
 
     query = query.filter(ClassSection.course_id.in_(allowed_course_ids))
+    if current_open_semester:
+        query = query.filter(ClassSection.semester == current_open_semester)
+    should_join_course = bool(course_query or faculty_id)
+    if should_join_course:
+        query = query.join(Course)
+    if course_query:
+        query = query.filter(or_(
+            Course.name.ilike(f"%{course_query}%"),
+            Course.id.cast(String).ilike(f"%{course_query}%"),
+        ))
+    if faculty_id and not course_query:
+        query = query.filter(Course.faculty_id == int(faculty_id))
 
-    if course_id:
-        query = query.filter(ClassSection.course_id == int(course_id))
-    if faculty_id:
-        query = query.join(Course).filter(Course.faculty_id == int(faculty_id))
-
-    return query.all()
+    return [
+        section
+        for section in query.all()
+        if is_section_open_for_registration(section)
+    ]
 
 def get_open_filter_options(student_code, training_program_semester=None):
-    allowed_course_ids = get_allowed_course_ids(student_code, training_program_semester)
+    allowed_course_ids = get_student_program_course_ids(student_code)
+    current_open_semester = get_current_open_semester(student_code)
+
     if not allowed_course_ids:
         return [], []
 
-    now = datetime.now()
-    open_sections_query = db.session.query(ClassSection.course_id).filter(
+    open_sections = ClassSection.query.filter(
         ClassSection.section_type == ClassSectionType.THEORY,
         ClassSection.course_id.in_(allowed_course_ids),
-        or_(
-            ClassSection.registration_start_date.is_(None),
-            ClassSection.registration_start_date <= now,
-        ),
-    ).distinct()
+    ).all()
 
-    open_course_ids = [course_id for course_id, in open_sections_query.all()]
+    open_course_ids = list({
+        section.course_id
+        for section in open_sections
+        if is_section_open_for_registration(section)
+        and (not current_open_semester or section.semester == current_open_semester)
+    })
     if not open_course_ids:
         return [], []
 
@@ -223,50 +390,21 @@ def get_current_training_program_semester(student_code):
 
 
 def get_registered_courses(student_code):
-    query = Enrollment.query.join(ClassSection).filter(
+    current_open_semester = get_current_open_semester(student_code)
+    if not current_open_semester:
+        return []
+
+    return Enrollment.query.join(ClassSection).filter(
         Enrollment.student_code == student_code,
         ClassSection.section_type == ClassSectionType.THEORY,
         Enrollment.status == EnrollmentStatus.REGISTERED,
-    )
-
-    training_program = get_student_training_program(student_code)
-    current_semester = get_current_training_program_semester(student_code)
-    if training_program and current_semester:
-        query = query.join(
-            TrainingProgramCourse,
-            TrainingProgramCourse.course_id == ClassSection.course_id,
-        ).filter(
-            TrainingProgramCourse.training_program_id == training_program.id,
-            TrainingProgramCourse.semester_no == current_semester,
-        )
-
-    return query.all()
+        ClassSection.semester == current_open_semester,
+        ClassSection.end_date >= datetime.now(),
+    ).all()
 
 
 def get_registered_credits(student_code):
-    enrollments = Enrollment.query.join(
-        ClassSection, Enrollment.class_section_id == ClassSection.id
-    ).join(
-        Course, ClassSection.course_id == Course.id
-    ).filter(
-        Enrollment.student_code == student_code,
-        Enrollment.status == EnrollmentStatus.REGISTERED,
-        ClassSection.section_type == ClassSectionType.THEORY,
-    )
-
-    training_program = get_student_training_program(student_code)
-    current_semester = get_current_training_program_semester(student_code)
-    if training_program and current_semester:
-        enrollments = enrollments.join(
-            TrainingProgramCourse,
-            TrainingProgramCourse.course_id == ClassSection.course_id,  #Thay ClassSection.course_id = Course.id
-        ).filter(
-            TrainingProgramCourse.training_program_id == training_program.id,
-            TrainingProgramCourse.semester_no == current_semester,
-        )
-
-    enrollments = enrollments.all()
-
+    enrollments = get_registered_courses(student_code)
     return sum(enrollment.class_section.course.credits or 0 for enrollment in enrollments)
 
 
@@ -439,18 +577,9 @@ def register_section(student_code, class_section_id):
         ).with_for_update().first()
         if not section:
             return False, "Không tìm thấy lớp học phần."
-        if section.section_type != ClassSectionType.THEORY:
-            return False, "Vui lòng chọn lớp lý thuyết để đăng ký."
-        if section.registration_start_date and datetime.now() < section.registration_start_date:
-            return False, "Chưa tới ngày bắt đầu đăng ký môn học."
-        if section.registration_deadline and datetime.now() > section.registration_deadline:
-            return False, "Đã quá hạn đăng ký môn học."
-        if not is_course_allowed(student_code, section.course):
-            return False, "Môn học không thuộc chương trình đào tạo của lớp bạn."
-
-        is_valid, missing_courses = check_prerequisite_courses(student_code, section.course_id)
-        if not is_valid:
-            return False, "Bạn chưa học môn tiên quyết: " + ", ".join(missing_courses) + "."
+        block_reason = get_section_registration_block_reason(student_code, section)
+        if block_reason:
+            return False, block_reason
 
         related_section_ids = [section.id]
         if section.linked_section_id:
@@ -612,12 +741,10 @@ def is_course_allowed(student_code, course):
 
 def get_filter_data(student_code, faculty_id=None, training_program_semester=None):
     courses, faculties = get_open_filter_options(student_code, training_program_semester)
-    if faculty_id:
-        courses = [course for course in courses if course.faculty_id == int(faculty_id)]
 
     return {
         "courses": courses,
-        "faculties": faculties,
+        "faculties": Faculty.query.order_by(Faculty.name).all(),
         "training_program_semesters": get_available_training_program_semesters(student_code),
     }
 

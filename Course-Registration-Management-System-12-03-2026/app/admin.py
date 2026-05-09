@@ -25,12 +25,30 @@ SCHEDULE_TIME_CHOICES = [
 ]
 
 
+def get_current_semester_value():
+    today = datetime.now()
+    semester_no = 1 if today.month <= 6 else 2
+    return f"{today.year}-{semester_no}"
+
+
 def get_semester_choices():
+    current_semester = get_current_semester_value()
+    choices = [(current_semester, current_semester)]
+
+    existing_semesters = [
+        semester
+        for semester, in db.session.query(ClassSection.semester).distinct().all()
+        if semester
+    ]
+    nearby_semesters = []
     current_year = datetime.now().year
-    choices = []
     for year in range(current_year - 1, current_year + 2):
-        choices.append((f"{year}-1", f"{year}-1"))
-        choices.append((f"{year}-2", f"{year}-2"))
+        nearby_semesters.extend([f"{year}-1", f"{year}-2"])
+
+    for semester in sorted({*existing_semesters, *nearby_semesters}, reverse=True):
+        if semester != current_semester:
+            choices.append((semester, semester))
+
     return choices
 
 class IndexView(AdminIndexView):
@@ -161,6 +179,7 @@ class ClassSectionView(BaseView):
         "semester": SelectField(
             "Semester",
             choices=get_semester_choices,
+            default=get_current_semester_value,
         ),
         "schedule_day": SelectField(
             "Schedule Day",
@@ -196,8 +215,6 @@ class ClassSectionView(BaseView):
         "max_students": "Max Students",
         "start_date": "Start Date",
         "end_date": "End Date",
-        "registration_start_date": "Registration Start Date",
-        "registration_deadline": "Registration Deadline",
         "section_type": "Section Type",
         "schedules": "Schedules",
     }
@@ -357,23 +374,18 @@ class ClassSectionView(BaseView):
         elif course.faculty_id:
             query = query.filter(Teacher.faculty_id == course.faculty_id)
 
-        if day:
-            used_teacher_ids = db.session.query(ClassSection.teacher_id).join(Schedule).filter(
-                ClassSection.semester == semester,
-                ClassSection.teacher_id.isnot(None),
-                Schedule.day_of_week == day,
-                Schedule.start_time < end_time,
-                Schedule.end_time > start_time,
-            )
-            if model and model.id:
-                used_teacher_ids = used_teacher_ids.filter(ClassSection.id != model.id)
-        else:
-            used_teacher_ids = db.session.query(ClassSection.teacher_id).filter(
-                ClassSection.semester == semester,
-                ClassSection.teacher_id.isnot(None),
-            )
-            if model and model.id:
-                used_teacher_ids = used_teacher_ids.filter(ClassSection.id != model.id)
+        if not day:
+            return query.order_by(Teacher.id).first()
+
+        used_teacher_ids = db.session.query(ClassSection.teacher_id).join(Schedule).filter(
+            ClassSection.semester == semester,
+            ClassSection.teacher_id.isnot(None),
+            Schedule.day_of_week == day,
+            Schedule.start_time < end_time,
+            Schedule.end_time > start_time,
+        )
+        if model and model.id:
+            used_teacher_ids = used_teacher_ids.filter(ClassSection.id != model.id)
 
         return query.filter(~Teacher.id.in_(used_teacher_ids)).order_by(Teacher.id).first()
 
@@ -396,12 +408,7 @@ class ClassSectionView(BaseView):
             if model and model.id:
                 used_room_ids = used_room_ids.filter(ClassSection.id != model.id)
         else:
-            used_room_ids = db.session.query(ClassSection.room_id).filter(
-                ClassSection.semester == semester,
-                ClassSection.room_id.isnot(None),
-            )
-            if model and model.id:
-                used_room_ids = used_room_ids.filter(ClassSection.id != model.id)
+            used_room_ids = []
 
         room = Room.query.filter(
             Room.room_type == room_type,
@@ -647,18 +654,8 @@ class ClassSectionView(BaseView):
 
         start_date = self.get_form_data(form, "start_date")
         end_date = self.get_form_data(form, "end_date")
-        registration_start_date = self.get_form_data(form, "registration_start_date")
-        registration_deadline = self.get_form_data(form, "registration_deadline")
         if start_date and end_date and start_date >= end_date:
             flash("Ngày bắt đầu phải nhỏ hơn ngày kết thúc.", "error")
-            return False
-
-        if registration_start_date and registration_deadline and registration_start_date > registration_deadline:
-            flash("Ngày bắt đầu đăng ký phải trước hoặc bằng hạn đăng ký.", "error")
-            return False
-
-        if registration_deadline and start_date and registration_deadline > start_date:
-            flash("Hạn đăng ký phải trước hoặc bằng ngày bắt đầu.", "error")
             return False
 
         if not self.is_valid_selected_teacher(form):
@@ -1019,11 +1016,39 @@ class CampusView(BaseView):
 
         return super(CampusView, self).delete_model(model)
 
+class FacultyView(BaseView):
+    column_list = ("name", "registration_start_date", "registration_deadline")
+    column_labels = {
+        "name": "Khoa",
+        "registration_start_date": "Ngày bắt đầu đăng ký",
+        "registration_deadline": "Hạn đăng ký",
+    }
+    form_excluded_columns = ("majors",)
+
+    def validate_registration_dates(self, form):
+        start_date = form.registration_start_date.data
+        deadline = form.registration_deadline.data
+        if start_date and deadline and start_date > deadline:
+            flash("Ngày bắt đầu đăng ký phải trước hoặc bằng hạn đăng ký.", "error")
+            return False
+        return True
+
+    def create_model(self, form):
+        if not self.validate_registration_dates(form):
+            return False
+        return super(FacultyView, self).create_model(form)
+
+    def update_model(self, form, model):
+        if not self.validate_registration_dates(form):
+            return False
+        return super(FacultyView, self).update_model(form, model)
+
 admin.add_view(CourseView(Course, db.session))
 admin.add_view(ClassSectionView(ClassSection, db.session))
 admin.add_view(ScheduleView(Schedule, db.session))
 admin.add_view(RoomView(Room, db.session))
 admin.add_view(TeacherView(Teacher, db.session))
+admin.add_view(FacultyView(Faculty, db.session))
 admin.add_view(CoursePrerequisiteView(CoursePrerequisite, db.session))
 admin.add_view(CampusView(Campus, db.session))
 

@@ -75,6 +75,8 @@ class Faculty(BaseModel):
     __tablename__ = "faculties"
 
     name = Column(String(255))
+    registration_start_date = Column(DateTime)
+    registration_deadline = Column(DateTime)
     majors = relationship("Major", backref="faculty", lazy=True)
 
 
@@ -199,8 +201,6 @@ class ClassSection(BaseModel):
     max_students = Column(Integer, nullable=False)
     start_date = Column(DateTime, nullable=False)
     end_date = Column(DateTime, nullable=False)
-    registration_start_date = Column(DateTime)
-    registration_deadline = Column(DateTime)
     section_type = Column(Enum(ClassSectionType), default=ClassSectionType.THEORY, nullable=False)
     linked_section_id = Column(Integer, ForeignKey("class_sections.id"))
 

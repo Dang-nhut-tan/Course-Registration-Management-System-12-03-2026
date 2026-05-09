@@ -2,14 +2,15 @@ import hashlib
 from datetime import datetime
 
 from app import app, db
-from app.model import Campus,ClassSection,ClassSectionType,Course,CourseMajor,CoursePrerequisite,Enrollment,EnrollmentStatus,Faculty,Major,Room,Schedule,Student,StudentClass,Teacher,TrainingProgram,TrainingProgramCourse,User,UserRole
+from app.model import Campus,ClassSection,ClassSectionType,Course,CourseMajor,CoursePrerequisite,Enrollment,EnrollmentStatus,Faculty,Major,Room,Schedule,Student,StudentClass,StudentClassSection,Teacher,TeacherCourse,TrainingProgram,TrainingProgramCourse,User,UserRole
 
 
 sample_data = {
     "faculties": [
-        {"id": 1, "name": "CNTT"},
-        {"id": 2, "name": "Kinh tế"},
-        {"id": 3, "name": "Quản trị kinh doanh"},
+        {"id": 1, "name": "CNTT", "registration_start_date": datetime(2026, 5, 1), "registration_deadline": datetime(2026, 5, 31)},
+        {"id": 2, "name": "Kinh tế", "registration_start_date": datetime(2026, 5, 1), "registration_deadline": datetime(2026, 5, 31)},
+        {"id": 3, "name": "Quản trị kinh doanh", "registration_start_date": datetime(2026, 7, 1), "registration_deadline": datetime(2026, 7, 31)},
+        {"id": 4, "name": "Khoa kiểm thử quá hạn", "registration_start_date": datetime(2026, 4, 1), "registration_deadline": datetime(2026, 5, 1)},
     ],
     "majors": [
         {"id": 1, "name": "HTTQL", "faculty_id": 1},
@@ -129,6 +130,12 @@ sample_data = {
         {"id": 80, "name": "Quản trị chuỗi cung ứng", "credits": 3, "faculty_id": 3, "is_shared": False},
         {"id": 81, "name": "Quản trị Marketing", "credits": 3, "faculty_id": 3, "is_shared": True},
         {"id": 82, "name": "Lập kế hoạch kinh doanh", "credits": 3, "faculty_id": 3, "is_shared": False},
+        {"id": 83, "name": "Kế toán tài chính 2", "credits": 3, "faculty_id": 2, "is_shared": True},
+        {"id": 84, "name": "Lớp đầy kiểm thử", "credits": 3, "faculty_id": 1, "is_shared": False},
+        {"id": 85, "name": "Môn thiếu tiên quyết kiểm thử", "credits": 3, "faculty_id": 1, "is_shared": False},
+        {"id": 86, "name": "Môn trùng lịch kiểm thử", "credits": 3, "faculty_id": 1, "is_shared": False},
+        {"id": 87, "name": "Môn học lại kiểm thử", "credits": 3, "faculty_id": 1, "is_shared": False},
+        {"id": 88, "name": "Môn quá hạn đăng ký kiểm thử", "credits": 3, "faculty_id": 4, "is_shared": True},
     ],
     "course_majors": [
         {"course_id": 1, "major_id": 1},
@@ -202,6 +209,10 @@ sample_data = {
         {"course_id": 80, "major_id": 1},
         {"course_id": 81, "major_id": 1},
         {"course_id": 82, "major_id": 1},
+        {"course_id": 84, "major_id": 1},
+        {"course_id": 85, "major_id": 1},
+        {"course_id": 86, "major_id": 1},
+        {"course_id": 87, "major_id": 1},
         {"course_id": 2, "major_id": 2},
         {"course_id": 3, "major_id": 2},
         {"course_id": 5, "major_id": 2},
@@ -222,6 +233,7 @@ sample_data = {
         {"course_id": 2, "prerequisite_id": 1},
         {"course_id": 4, "prerequisite_id": 3},
         {"course_id": 8, "prerequisite_id": 7},
+        {"course_id": 85, "prerequisite_id": 1},
     ],
     "training_program_courses": [
         {"training_program_id": 1, "course_id": 30, "semester_no": 1},
@@ -254,6 +266,9 @@ sample_data = {
         {"training_program_id": 1, "course_id": 11, "semester_no": 6},
         {"training_program_id": 1, "course_id": 52, "semester_no": 6},
         {"training_program_id": 1, "course_id": 53, "semester_no": 6},
+        {"training_program_id": 1, "course_id": 84, "semester_no": 6},
+        {"training_program_id": 1, "course_id": 85, "semester_no": 6},
+        {"training_program_id": 1, "course_id": 86, "semester_no": 6},
         {"training_program_id": 1, "course_id": 54, "semester_no": 7},
         {"training_program_id": 1, "course_id": 55, "semester_no": 7},
         {"training_program_id": 1, "course_id": 56, "semester_no": 7},
@@ -285,6 +300,7 @@ sample_data = {
         {"training_program_id": 1, "course_id": 80, "semester_no": 11},
         {"training_program_id": 1, "course_id": 81, "semester_no": 11},
         {"training_program_id": 1, "course_id": 82, "semester_no": 11},
+        {"training_program_id": 1, "course_id": 87, "semester_no": 8},
 
         {"training_program_id": 5, "course_id": 10, "semester_no": 1},
         {"training_program_id": 5, "course_id": 23, "semester_no": 2},
@@ -348,6 +364,26 @@ sample_data = {
         {"id": 3, "name": "Thầy D", "faculty_id": 1},
         {"id": 4, "name": "Thầy K", "faculty_id": 2},
         {"id": 5, "name": "Cô M", "faculty_id": 3},
+        {"id": 6, "name": "Thầy Test Quá Hạn", "faculty_id": 4},
+    ],
+    "teacher_courses": [
+        {"teacher_id": 1, "course_id": 1},
+        {"teacher_id": 1, "course_id": 11},
+        {"teacher_id": 1, "course_id": 53},
+        {"teacher_id": 2, "course_id": 2},
+        {"teacher_id": 2, "course_id": 3},
+        {"teacher_id": 2, "course_id": 84},
+        {"teacher_id": 2, "course_id": 85},
+        {"teacher_id": 2, "course_id": 86},
+        {"teacher_id": 3, "course_id": 31},
+        {"teacher_id": 3, "course_id": 32},
+        {"teacher_id": 3, "course_id": 52},
+        {"teacher_id": 3, "course_id": 87},
+        {"teacher_id": 4, "course_id": 78},
+        {"teacher_id": 4, "course_id": 83},
+        {"teacher_id": 5, "course_id": 79},
+        {"teacher_id": 5, "course_id": 81},
+        {"teacher_id": 6, "course_id": 88},
     ],
     "rooms": [
         {"id": 1, "name": "A101", "room_type": "theory", "capacity": 50, "campus_id": 1},
@@ -368,58 +404,65 @@ sample_data = {
         {"id": 3, "name": "Cơ sở 3", "address": "TPHCM"},
     ],
     "class_sections": [
-        {"id": 1, "name": "DH23IM01", "student_class_id": 1, "course_id": 53, "teacher_id": 1, "room_id": 1, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 2, "name": "DH23CS01", "student_class_id": 5, "course_id": 2, "teacher_id": 2, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 10, "name": "DH23IM02", "student_class_id": 4, "course_id": 3, "teacher_id": 2, "room_id": 4, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15", "section_type": "practice"},
-        {"id": 3, "name": "DH23IM02", "student_class_id": 4, "course_id": 3, "teacher_id": 1, "room_id": 3, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15", "linked_section_id": 10},
-        {"id": 4, "name": "DH23IM01", "student_class_id": 1, "course_id": 51, "teacher_id": 3, "room_id": 1, "semester": "2026-1", "max_students": 40, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 11, "name": "DH23CS02", "student_class_id": 6, "course_id": 5, "teacher_id": 3, "room_id": 5, "semester": "2026-1", "max_students": 35, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15", "section_type": "practice"},
-        {"id": 5, "name": "DH23CS02", "student_class_id": 6, "course_id": 5, "teacher_id": 2, "room_id": 2, "semester": "2026-1", "max_students": 35, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15", "linked_section_id": 11},
-        {"id": 6, "name": "DH23CS01", "student_class_id": 5, "course_id": 6, "teacher_id": 3, "room_id": 3, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 12, "name": "DH23IM02", "student_class_id": 4, "course_id": 11, "teacher_id": 1, "room_id": 1, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 13, "name": "DH23IM02", "student_class_id": 4, "course_id": 50, "teacher_id": 2, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 14, "name": "DH23IM01", "student_class_id": 1, "course_id": 52, "teacher_id": 3, "room_id": 3, "semester": "2026-1", "max_students": 40, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 15, "name": "DH23IM01", "student_class_id": 1, "course_id": 54, "teacher_id": 1, "room_id": 1, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 16, "name": "DH23CS01", "student_class_id": 5, "course_id": 15, "teacher_id": 2, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 17, "name": "DH23CS02", "student_class_id": 6, "course_id": 16, "teacher_id": 3, "room_id": 3, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 18, "name": "DH23CS01", "student_class_id": 5, "course_id": 17, "teacher_id": 1, "room_id": 1, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 19, "name": "DH23IM01", "student_class_id": 1, "course_id": 34, "teacher_id": 1, "room_id": 1, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 20, "name": "DH23IM02", "student_class_id": 4, "course_id": 39, "teacher_id": 2, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 21, "name": "DH23IM01", "student_class_id": 1, "course_id": 40, "teacher_id": 3, "room_id": 3, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 22, "name": "DH23IM02", "student_class_id": 4, "course_id": 45, "teacher_id": 1, "room_id": 1, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 23, "name": "DH23IM01", "student_class_id": 1, "course_id": 49, "teacher_id": 2, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 24, "name": "DH23IM02", "student_class_id": 4, "course_id": 54, "teacher_id": 3, "room_id": 3, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 25, "name": "DH23IM01", "student_class_id": 1, "course_id": 58, "teacher_id": 1, "room_id": 1, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 26, "name": "DH23IM02", "student_class_id": 4, "course_id": 61, "teacher_id": 2, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 27, "name": "DH23IM01", "student_class_id": 1, "course_id": 64, "teacher_id": 3, "room_id": 3, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 28, "name": "DH23IM02", "student_class_id": 4, "course_id": 65, "teacher_id": 1, "room_id": 1, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 30, "name": "DH23IM02", "student_class_id": 4, "course_id": 31, "teacher_id": 3, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 31, "name": "DH23IM01", "student_class_id": 1, "course_id": 32, "teacher_id": 1, "room_id": 3, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 32, "name": "DH23IM02", "student_class_id": 4, "course_id": 33, "teacher_id": 2, "room_id": 1, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 33, "name": "DH23IM01", "student_class_id": 1, "course_id": 35, "teacher_id": 3, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 37, "name": "DH23IM01", "student_class_id": 1, "course_id": 41, "teacher_id": 3, "room_id": 3, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 38, "name": "DH23IM02", "student_class_id": 4, "course_id": 43, "teacher_id": 1, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 39, "name": "DH23IM01", "student_class_id": 1, "course_id": 44, "teacher_id": 4, "room_id": 3, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 41, "name": "DH23IM01", "student_class_id": 1, "course_id": 46, "teacher_id": 4, "room_id": 1, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 42, "name": "DH23IM02", "student_class_id": 4, "course_id": 47, "teacher_id": 4, "room_id": 3, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 44, "name": "DH23IM02", "student_class_id": 4, "course_id": 4, "teacher_id": 2, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 45, "name": "DH23CS01", "student_class_id": 5, "course_id": 23, "teacher_id": 1, "room_id": 6, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 46, "name": "DH23CS02", "student_class_id": 6, "course_id": 24, "teacher_id": 2, "room_id": 7, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 47, "name": "DH23CS01", "student_class_id": 5, "course_id": 25, "teacher_id": 3, "room_id": 8, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 48, "name": "DH23CS02", "student_class_id": 6, "course_id": 26, "teacher_id": 1, "room_id": 9, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 49, "name": "DH23TC01", "student_class_id": 2, "course_id": 76, "teacher_id": 4, "room_id": 10, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 50, "name": "DH23TC01", "student_class_id": 2, "course_id": 77, "teacher_id": 4, "room_id": 11, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 51, "name": "DH23TC01", "student_class_id": 2, "course_id": 78, "teacher_id": 4, "room_id": 6, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 52, "name": "DH22MK01", "student_class_id": 3, "course_id": 79, "teacher_id": 5, "room_id": 7, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 53, "name": "DH22MK01", "student_class_id": 3, "course_id": 81, "teacher_id": 5, "room_id": 8, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 54, "name": "DH22MK01", "student_class_id": 3, "course_id": 82, "teacher_id": 5, "room_id": 9, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 55, "name": "DH23CS01", "student_class_id": 5, "course_id": 42, "teacher_id": 5, "room_id": 10, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 56, "name": "DH23TC01", "student_class_id": 2, "course_id": 62, "teacher_id": 5, "room_id": 11, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 57, "name": "DH22MK01", "student_class_id": 3, "course_id": 50, "teacher_id": 4, "room_id": 6, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 58, "name": "DH23CS02", "student_class_id": 6, "course_id": 11, "teacher_id": 1, "room_id": 7, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 7, "name": "DH23TC01", "student_class_id": 2, "course_id": 7, "teacher_id": 4, "room_id": 1, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 8, "name": "DH23TC01", "student_class_id": 2, "course_id": 8, "teacher_id": 4, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
-        {"id": 9, "name": "DH22MK01", "student_class_id": 3, "course_id": 9, "teacher_id": 5, "room_id": 3, "semester": "2026-1", "max_students": 40, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
+        {"id": 1, "name": "DH23IM01", "student_class_id": 1, "course_id": 53, "teacher_id": 1, "room_id": 1, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 2, "name": "DH23CS01", "student_class_id": 5, "course_id": 2, "teacher_id": 2, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 10, "name": "DH23IM02", "student_class_id": 4, "course_id": 3, "teacher_id": 2, "room_id": 4, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "section_type": "practice"},
+        {"id": 3, "name": "DH23IM02", "student_class_id": 4, "course_id": 3, "teacher_id": 1, "room_id": 3, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "linked_section_id": 10},
+        {"id": 4, "name": "DH23IM01", "student_class_id": 1, "course_id": 51, "teacher_id": 3, "room_id": 1, "semester": "2026-1", "max_students": 40, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 11, "name": "DH23CS02", "student_class_id": 6, "course_id": 5, "teacher_id": 3, "room_id": 5, "semester": "2026-1", "max_students": 35, "start_date": "2026-06-01", "end_date": "2026-09-30", "section_type": "practice"},
+        {"id": 5, "name": "DH23CS02", "student_class_id": 6, "course_id": 5, "teacher_id": 2, "room_id": 2, "semester": "2026-1", "max_students": 35, "start_date": "2026-06-01", "end_date": "2026-09-30", "linked_section_id": 11},
+        {"id": 6, "name": "DH23CS01", "student_class_id": 5, "course_id": 6, "teacher_id": 3, "room_id": 3, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 12, "name": "DH23IM02", "student_class_id": 4, "course_id": 11, "teacher_id": 1, "room_id": 1, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 13, "name": "DH23IM02", "student_class_id": 4, "course_id": 50, "teacher_id": 2, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 14, "name": "DH23IM01", "student_class_id": 1, "course_id": 52, "teacher_id": 3, "room_id": 3, "semester": "2026-1", "max_students": 40, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 15, "name": "DH23IM01", "student_class_id": 1, "course_id": 54, "teacher_id": 1, "room_id": 1, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 16, "name": "DH23CS01", "student_class_id": 5, "course_id": 15, "teacher_id": 2, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 17, "name": "DH23CS02", "student_class_id": 6, "course_id": 16, "teacher_id": 3, "room_id": 3, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 18, "name": "DH23CS01", "student_class_id": 5, "course_id": 17, "teacher_id": 1, "room_id": 1, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 19, "name": "DH23IM01", "student_class_id": 1, "course_id": 34, "teacher_id": 1, "room_id": 1, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 20, "name": "DH23IM02", "student_class_id": 4, "course_id": 39, "teacher_id": 2, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 21, "name": "DH23IM01", "student_class_id": 1, "course_id": 40, "teacher_id": 3, "room_id": 3, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 22, "name": "DH23IM02", "student_class_id": 4, "course_id": 45, "teacher_id": 1, "room_id": 1, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 23, "name": "DH23IM01", "student_class_id": 1, "course_id": 49, "teacher_id": 2, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 24, "name": "DH23IM02", "student_class_id": 4, "course_id": 54, "teacher_id": 3, "room_id": 3, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 25, "name": "DH23IM01", "student_class_id": 1, "course_id": 58, "teacher_id": 1, "room_id": 1, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 26, "name": "DH23IM02", "student_class_id": 4, "course_id": 61, "teacher_id": 2, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 27, "name": "DH23IM01", "student_class_id": 1, "course_id": 64, "teacher_id": 3, "room_id": 3, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 28, "name": "DH23IM02", "student_class_id": 4, "course_id": 65, "teacher_id": 1, "room_id": 1, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 30, "name": "DH23IM02", "student_class_id": 4, "course_id": 31, "teacher_id": 3, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 31, "name": "DH23IM01", "student_class_id": 1, "course_id": 32, "teacher_id": 1, "room_id": 3, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 32, "name": "DH23IM02", "student_class_id": 4, "course_id": 33, "teacher_id": 2, "room_id": 1, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 33, "name": "DH23IM01", "student_class_id": 1, "course_id": 35, "teacher_id": 3, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 37, "name": "DH23IM01", "student_class_id": 1, "course_id": 41, "teacher_id": 3, "room_id": 3, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 38, "name": "DH23IM02", "student_class_id": 4, "course_id": 43, "teacher_id": 1, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 39, "name": "DH23IM01", "student_class_id": 1, "course_id": 44, "teacher_id": 4, "room_id": 3, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 41, "name": "DH23IM01", "student_class_id": 1, "course_id": 46, "teacher_id": 4, "room_id": 1, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 42, "name": "DH23IM02", "student_class_id": 4, "course_id": 47, "teacher_id": 4, "room_id": 3, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 44, "name": "DH23IM02", "student_class_id": 4, "course_id": 4, "teacher_id": 2, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 45, "name": "DH23CS01", "student_class_id": 5, "course_id": 23, "teacher_id": 1, "room_id": 6, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 46, "name": "DH23CS02", "student_class_id": 6, "course_id": 24, "teacher_id": 2, "room_id": 7, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 47, "name": "DH23CS01", "student_class_id": 5, "course_id": 25, "teacher_id": 3, "room_id": 8, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 48, "name": "DH23CS02", "student_class_id": 6, "course_id": 26, "teacher_id": 1, "room_id": 9, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 49, "name": "DH23TC01", "student_class_id": 2, "course_id": 76, "teacher_id": 4, "room_id": 10, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 50, "name": "DH23TC01", "student_class_id": 2, "course_id": 77, "teacher_id": 4, "room_id": 11, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 51, "name": "DH23TC01", "student_class_id": 2, "course_id": 78, "teacher_id": 4, "room_id": 6, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 52, "name": "DH22MK01", "student_class_id": 3, "course_id": 79, "teacher_id": 5, "room_id": 7, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 53, "name": "DH22MK01", "student_class_id": 3, "course_id": 81, "teacher_id": 5, "room_id": 8, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 54, "name": "DH22MK01", "student_class_id": 3, "course_id": 82, "teacher_id": 5, "room_id": 9, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 55, "name": "DH23CS01", "student_class_id": 5, "course_id": 42, "teacher_id": 5, "room_id": 10, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 56, "name": "DH23TC01", "student_class_id": 2, "course_id": 62, "teacher_id": 5, "room_id": 11, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 57, "name": "DH22MK01", "student_class_id": 3, "course_id": 50, "teacher_id": 4, "room_id": 6, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 58, "name": "DH23CS02", "student_class_id": 6, "course_id": 11, "teacher_id": 1, "room_id": 7, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 61, "name": "DH22MK01", "student_class_id": 3, "course_id": 83, "teacher_id": 4, "room_id": 6, "semester": "2026-1", "max_students": 50, "start_date": "2026-05-12", "end_date": "2026-07-30"},
+        {"id": 62, "name": "TEST-FULL", "student_class_id": 1, "course_id": 84, "teacher_id": 2, "room_id": 8, "semester": "2026-1", "max_students": 1, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 63, "name": "TEST-PREREQ", "student_class_id": 1, "course_id": 85, "teacher_id": 2, "room_id": 8, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 64, "name": "TEST-CONFLICT", "student_class_id": 1, "course_id": 86, "teacher_id": 2, "room_id": 2, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 65, "name": "TEST-DEADLINE", "student_class_id": 1, "course_id": 88, "teacher_id": 6, "room_id": 11, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 66, "name": "TEST-COMPLETED-OLD", "student_class_id": 1, "course_id": 6, "teacher_id": 3, "room_id": 3, "semester": "2025-1", "max_students": 50, "start_date": "2025-09-01", "end_date": "2026-01-15"},
+        {"id": 67, "name": "TEST-RETAKE", "student_class_id": 1, "course_id": 87, "teacher_id": 3, "room_id": 2, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 7, "name": "DH23TC01", "student_class_id": 2, "course_id": 7, "teacher_id": 4, "room_id": 1, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 8, "name": "DH23TC01", "student_class_id": 2, "course_id": 8, "teacher_id": 4, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30"},
+        {"id": 9, "name": "DH22MK01", "student_class_id": 3, "course_id": 9, "teacher_id": 5, "room_id": 3, "semester": "2026-1", "max_students": 40, "start_date": "2026-06-01", "end_date": "2026-09-30"},
     ],
     "schedules": [
         {"id": 1, "class_section_id": 1, "day_of_week": 2, "start_time": "07:00", "end_time": "11:30"},
@@ -471,6 +514,13 @@ sample_data = {
         {"id": 56, "class_section_id": 56, "day_of_week": 5, "start_time": "13:00", "end_time": "17:30"},
         {"id": 57, "class_section_id": 57, "day_of_week": 6, "start_time": "07:00", "end_time": "11:30"},
         {"id": 58, "class_section_id": 58, "day_of_week": 6, "start_time": "07:00", "end_time": "11:30"},
+        {"id": 61, "class_section_id": 61, "day_of_week": 4, "start_time": "13:00", "end_time": "17:30"},
+        {"id": 62, "class_section_id": 62, "day_of_week": 4, "start_time": "07:00", "end_time": "11:30"},
+        {"id": 63, "class_section_id": 63, "day_of_week": 5, "start_time": "13:00", "end_time": "17:30"},
+        {"id": 64, "class_section_id": 64, "day_of_week": 2, "start_time": "07:00", "end_time": "11:30"},
+        {"id": 65, "class_section_id": 65, "day_of_week": 3, "start_time": "13:00", "end_time": "17:30"},
+        {"id": 66, "class_section_id": 66, "day_of_week": 6, "start_time": "13:00", "end_time": "17:30"},
+        {"id": 67, "class_section_id": 67, "day_of_week": 7, "start_time": "13:00", "end_time": "17:30"},
         {"id": 7, "class_section_id": 7, "day_of_week": 2, "start_time": "13:00", "end_time": "17:30"},
         {"id": 8, "class_section_id": 8, "day_of_week": 4, "start_time": "07:00", "end_time": "11:30"},
         {"id": 9, "class_section_id": 9, "day_of_week": 6, "start_time": "13:00", "end_time": "17:30"},
@@ -484,6 +534,11 @@ sample_data = {
         {"id": 8, "student_code": "2354050118", "class_section_id": 6, "status": "registered"},
         {"id": 4, "student_code": "2354050114", "class_section_id": 7, "status": "registered"},
         {"id": 5, "student_code": "2354050115", "class_section_id": 9, "status": "registered"},
+        {"id": 9, "student_code": "2354050116", "class_section_id": 62, "status": "registered"},
+        {"id": 10, "student_code": "2354050113", "class_section_id": 66, "status": "registered", "registered_at": "2025-09-01T08:00:00"},
+    ],
+    "student_class_sections": [
+        {"student_code": "2354050113", "class_section_id": 1, "score_midterm": 7.5},
     ],
 }
 
@@ -493,7 +548,14 @@ def seed_data():
     db.create_all()
 
     for faculty in sample_data["faculties"]:
-        db.session.add(Faculty(id=faculty["id"], name=faculty["name"]))
+        db.session.add(
+            Faculty(
+                id=faculty["id"],
+                name=faculty["name"],
+                registration_start_date=faculty.get("registration_start_date"),
+                registration_deadline=faculty.get("registration_deadline"),
+            )
+        )
     db.session.commit()
 
     for major in sample_data["majors"]:
@@ -621,6 +683,15 @@ def seed_data():
         )
     db.session.commit()
 
+    for teacher_course in sample_data.get("teacher_courses", []):
+        db.session.add(
+            TeacherCourse(
+                teacher_id=teacher_course["teacher_id"],
+                course_id=teacher_course["course_id"],
+            )
+        )
+    db.session.commit()
+
     for class_section in sample_data["class_sections"]:
         db.session.add(
             ClassSection(
@@ -634,10 +705,6 @@ def seed_data():
                 max_students=class_section["max_students"],
                 start_date=datetime.fromisoformat(class_section["start_date"]),
                 end_date=datetime.fromisoformat(class_section["end_date"]),
-                registration_start_date=datetime.fromisoformat(class_section["registration_start_date"])
-                if class_section.get("registration_start_date")
-                else None,
-                registration_deadline=datetime.fromisoformat(class_section["registration_deadline"]),
                 section_type=ClassSectionType(class_section.get("section_type", "theory")),
                 linked_section_id=class_section.get("linked_section_id"),
             )
@@ -670,11 +737,22 @@ def seed_data():
         )
     db.session.commit()
 
+    for student_class_section in sample_data.get("student_class_sections", []):
+        db.session.add(
+            StudentClassSection(
+                student_code=student_class_section["student_code"],
+                class_section_id=student_class_section["class_section_id"],
+                score_midterm=student_class_section.get("score_midterm"),
+            )
+        )
+    db.session.commit()
+
     print("Seed full data thành công!")
 
 
 if __name__ == "__main__":
     with app.app_context():
         seed_data()
+
 
 
