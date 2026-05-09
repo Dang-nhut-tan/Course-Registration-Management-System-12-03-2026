@@ -46,14 +46,16 @@ def add_course_with_section(
     semester_no=CURRENT_TRAINING_PROGRAM_SEMESTER,
     start_offset_days=-5,
     end_offset_days=30,
-    registration_start_offset_days=-7,
+    add_to_training_program=True,
+    faculty_id=1,
+    is_shared=False,
 ):
     course = Course(
         id=course_id,
         name=f"Course {course_id}",
         credits=credits,
-        faculty_id=1,
-        is_shared=False,
+        faculty_id=faculty_id,
+        is_shared=is_shared,
     )
     section = ClassSection(
         id=section_id,
@@ -63,16 +65,18 @@ def add_course_with_section(
         max_students=50,
         start_date=datetime.now() + timedelta(days=start_offset_days),
         end_date=datetime.now() + timedelta(days=end_offset_days),
-        registration_start_date=datetime.now() + timedelta(days=registration_start_offset_days),
-        registration_deadline=datetime.now() + timedelta(days=7),
     )
-    training_program_course = TrainingProgramCourse(
-        training_program_id=1,
-        course_id=course_id,
-        semester_no=semester_no,
-    )
+    records = [course, section]
+    if add_to_training_program:
+        records.append(
+            TrainingProgramCourse(
+                training_program_id=1,
+                course_id=course_id,
+                semester_no=semester_no,
+            )
+        )
 
-    test_session.add_all([course, section, training_program_course])
+    test_session.add_all(records)
     test_session.commit()
 
     return course, section
@@ -104,11 +108,12 @@ def test_prerequisite_requires_completed_course(test_session, test_app):
         assert success is False
 
 
-def test_register_section_blocks_after_registration_deadline(test_session, test_app):
+def test_register_section_blocks_after_faculty_registration_deadline(test_session, test_app):
     with test_app.app_context():
         seed_student_context(test_session)
         course, section = add_course_with_section(test_session, course_id=1, section_id=1)
-        section.registration_deadline = datetime.now() - timedelta(days=1)
+        faculty = db.session.get(Faculty, 1)
+        faculty.registration_deadline = datetime.now() - timedelta(days=1)
         test_session.commit()
 
         success, message = utils.register_section("2354050999", section.id)
@@ -121,15 +126,14 @@ def test_register_section_blocks_after_registration_deadline(test_session, test_
         ).count() == 0
 
 
-def test_register_section_blocks_before_registration_start_date(test_session, test_app):
+def test_register_section_blocks_before_faculty_registration_start_date(test_session, test_app):
     with test_app.app_context():
         seed_student_context(test_session)
-        course, section = add_course_with_section(
-            test_session,
-            course_id=1,
-            section_id=1,
-            registration_start_offset_days=1,
-        )
+        course, section = add_course_with_section(test_session, course_id=1, section_id=1)
+        faculty = db.session.get(Faculty, 1)
+        faculty.registration_start_date = datetime.now() + timedelta(days=1)
+        faculty.registration_deadline = datetime.now() + timedelta(days=7)
+        test_session.commit()
 
         success, message = utils.register_section("2354050999", section.id)
 
@@ -141,19 +145,212 @@ def test_register_section_blocks_before_registration_start_date(test_session, te
         ).count() == 0
 
 
-def test_get_sections_hides_before_registration_start_date(test_session, test_app):
+def test_get_sections_hides_before_faculty_registration_start_date(test_session, test_app):
     with test_app.app_context():
         seed_student_context(test_session)
-        course, section = add_course_with_section(
-            test_session,
-            course_id=1,
-            section_id=1,
-            registration_start_offset_days=1,
-        )
+        course, section = add_course_with_section(test_session, course_id=1, section_id=1)
+        faculty = db.session.get(Faculty, 1)
+        faculty.registration_start_date = datetime.now() + timedelta(days=1)
+        faculty.registration_deadline = datetime.now() + timedelta(days=7)
+        test_session.commit()
 
         sections = utils.get_sections("2354050999")
 
         assert section not in sections
+
+
+def test_get_sections_hides_extra_class_section_outside_current_training_program_semester(test_session, test_app):
+    with test_app.app_context():
+        seed_student_context(test_session)
+        add_course_with_section(test_session, course_id=1, section_id=1)
+        extra_course, extra_section = add_course_with_section(
+            test_session,
+            course_id=2,
+            section_id=2,
+            add_to_training_program=False,
+        )
+
+        sections = utils.get_sections("2354050999")
+        courses, faculties = utils.get_open_filter_options("2354050999")
+
+        assert extra_section not in sections
+        assert extra_course not in courses
+
+
+def test_get_sections_filters_by_course_text_and_faculty(test_session, test_app):
+    with test_app.app_context():
+        seed_student_context(test_session)
+        add_course_with_section(test_session, course_id=1, section_id=1)
+        add_course_with_section(test_session, course_id=2, section_id=2)
+
+        sections = utils.get_sections("2354050999", course_query="Course 2", faculty_id=1)
+
+        assert [section.id for section in sections] == [2]
+
+
+def test_course_search_can_show_shared_course_from_other_faculty(test_session, test_app):
+    with test_app.app_context():
+        seed_student_context(test_session)
+        other_faculty = Faculty(id=2, name="Kinh tế")
+        test_session.add(other_faculty)
+        shared_course, shared_section = add_course_with_section(
+            test_session,
+            course_id=2,
+            section_id=2,
+            add_to_training_program=False,
+            faculty_id=2,
+            is_shared=True,
+        )
+
+        sections = utils.get_sections(
+            "2354050999",
+            course_query="Course 2",
+            faculty_id=1,
+        )
+        success, message = utils.register_section("2354050999", shared_section.id)
+
+        assert [section.id for section in sections] == [shared_section.id]
+        assert success is True
+
+
+def test_register_section_blocks_extra_class_section_outside_current_training_program_semester(test_session, test_app):
+    with test_app.app_context():
+        seed_student_context(test_session)
+        add_course_with_section(test_session, course_id=1, section_id=1)
+        extra_course, extra_section = add_course_with_section(
+            test_session,
+            course_id=2,
+            section_id=2,
+            add_to_training_program=False,
+        )
+
+        success, message = utils.register_section("2354050999", extra_section.id)
+
+        assert success is False
+        assert message == "Không thuộc ngành của bạn."
+        assert Enrollment.query.filter_by(
+            student_code="2354050999",
+            class_section_id=extra_section.id,
+            status=EnrollmentStatus.REGISTERED,
+        ).count() == 0
+
+
+def test_section_registration_block_reason_blocks_over_credit_limit(test_session, test_app):
+    with test_app.app_context():
+        seed_student_context(test_session)
+
+        for course_id in range(1, 10):
+            add_course_with_section(test_session, course_id=course_id, section_id=course_id, credits=3)
+
+        candidate_course, candidate_section = add_course_with_section(
+            test_session,
+            course_id=10,
+            section_id=10,
+            credits=3,
+        )
+        for enrollment_id, section_id in enumerate(range(1, 9), start=1):
+            test_session.add(
+                Enrollment(
+                    id=enrollment_id,
+                    student_code="2354050999",
+                    class_section_id=section_id,
+                    status=EnrollmentStatus.REGISTERED,
+                )
+            )
+        test_session.commit()
+
+        reason = utils.get_section_registration_block_reason("2354050999", candidate_section)
+        success, message = utils.register_section("2354050999", candidate_section.id)
+
+        assert reason == "Vượt giới hạn 25 tín chỉ trong 1 kỳ."
+        assert success is False
+        assert message == "Vượt giới hạn 25 tín chỉ trong 1 kỳ."
+
+
+def test_registered_courses_includes_current_open_semester_enrollment(test_session, test_app):
+    with test_app.app_context():
+        seed_student_context(test_session)
+        add_course_with_section(test_session, course_id=1, section_id=1)
+        extra_course, extra_section = add_course_with_section(
+            test_session,
+            course_id=2,
+            section_id=2,
+            add_to_training_program=False,
+        )
+        test_session.add(
+            Enrollment(
+                student_code="2354050999",
+                class_section_id=extra_section.id,
+                status=EnrollmentStatus.REGISTERED,
+            )
+        )
+        test_session.commit()
+
+        registered_courses = utils.get_registered_courses("2354050999")
+
+        assert [enrollment.class_section_id for enrollment in registered_courses] == [extra_section.id]
+
+
+def test_registered_courses_hides_ended_and_previous_semester_enrollments(test_session, test_app):
+    with test_app.app_context():
+        seed_student_context(test_session)
+        current_course, current_section = add_course_with_section(
+            test_session,
+            course_id=1,
+            section_id=1,
+        )
+        ended_course, ended_section = add_course_with_section(
+            test_session,
+            course_id=2,
+            section_id=2,
+            end_offset_days=-1,
+        )
+        previous_course, previous_section = add_course_with_section(
+            test_session,
+            course_id=3,
+            section_id=3,
+            semester_no=1,
+        )
+        previous_section.semester = "2025-1"
+        test_session.add_all([
+            Enrollment(
+                id=1,
+                student_code="2354050999",
+                class_section_id=current_section.id,
+                status=EnrollmentStatus.REGISTERED,
+            ),
+            Enrollment(
+                id=2,
+                student_code="2354050999",
+                class_section_id=ended_section.id,
+                status=EnrollmentStatus.REGISTERED,
+            ),
+            Enrollment(
+                id=3,
+                student_code="2354050999",
+                class_section_id=previous_section.id,
+                status=EnrollmentStatus.REGISTERED,
+            ),
+        ])
+        test_session.commit()
+
+        registered_courses = utils.get_registered_courses("2354050999")
+
+        assert [enrollment.class_section_id for enrollment in registered_courses] == [current_section.id]
+
+
+def test_register_section_uses_faculty_registration_deadline(test_session, test_app):
+    with test_app.app_context():
+        seed_student_context(test_session)
+        course, section = add_course_with_section(test_session, course_id=1, section_id=1)
+        faculty = db.session.get(Faculty, 1)
+        faculty.registration_deadline = datetime.now() - timedelta(days=1)
+        test_session.commit()
+
+        success, message = utils.register_section("2354050999", section.id)
+
+        assert success is False
+        assert "quá hạn đăng ký" in message
 
 
 def test_cancel_course_blocks_when_falling_below_minimum_credits(test_session, test_app):

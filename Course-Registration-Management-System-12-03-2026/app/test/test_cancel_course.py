@@ -200,7 +200,6 @@ def test_cancel_registered_course_cancels_linked_practice_section(test_session, 
             max_students=50,
             start_date=datetime.now() - timedelta(days=5),
             end_date=datetime.now() + timedelta(days=30),
-            registration_deadline=datetime.now() + timedelta(days=7),
             section_type=ClassSectionType.PRACTICE,
         )
         theory_section.linked_section_id = practice_section.id

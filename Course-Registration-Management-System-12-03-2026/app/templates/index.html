@@ -43,12 +43,33 @@
         {% endfor %}
       </select>
 
-      <select name="course" class="w-full rounded border p-2">
-        <option value="">-- Chọn môn học --</option>
-        {% for c in courses %}
-        <option value="{{ c.id }}" {% if selected_course_id == c.id|string %}selected{% endif %}>{{ c.name }}</option>
-        {% endfor %}
-      </select>
+      <div class="course-search" data-course-combobox>
+        <input
+          type="text"
+          name="course_query"
+          value="{{ selected_course_query }}"
+          class="course-search__input"
+          placeholder="Lọc theo môn học"
+          autocomplete="off"
+          data-course-input
+        />
+        <button class="course-search__toggle" type="button" aria-label="Mở danh sách môn học" data-course-toggle></button>
+        <div class="course-search__menu" data-course-menu>
+          {% for c in courses %}
+          <button
+            type="button"
+            class="course-search__option"
+            data-course-option
+            data-search-text="{{ (c.name ~ ' ' ~ c.id)|lower }}"
+            data-value="{{ c.name }}"
+          >
+            <span class="course-search__name">{{ c.name }}</span>
+            <span class="course-search__code">Mã: {{ c.id }}</span>
+          </button>
+          {% endfor %}
+          <div class="course-search__empty" data-course-empty>Không tìm thấy môn học</div>
+        </div>
+      </div>
 
       <select name="faculty" class="w-full rounded border p-2">
         <option value="">-- Chọn khoa --</option>
@@ -67,12 +88,16 @@
   {% if selected_training_program_semester and current_training_program_semester and selected_training_program_semester != current_training_program_semester %}
   <p class="mb-3 text-sm text-amber-600">Bạn đang xem kỳ {{ selected_training_program_semester }}. Chỉ kỳ hiện tại là kỳ {{ current_training_program_semester }} mới được phép đăng ký.</p>
   {% endif %}
-  <p class="mb-4">Hiển thị <strong>{{ sections|length }}</strong> kết quả</p>
+  <p class="mb-4">
+    Hiển thị <strong>{{ total_sections }}</strong> kết quả
+  </p>
 
   <p class="mb-2">
-    Tổng số tín chỉ đã đăng ký: <strong>{{ registered_credits }}</strong>/25
+    Tổng số tín chỉ đã đăng ký: <strong>{{ registered_credits }}</strong>/{{ credit_limit }}
     {% if minimum_registered_credits and registered_credits < minimum_registered_credits %}
     <span class="font-semibold text-orange-600">(Chưa đạt tối thiểu 12)</span>
+    {% elif registered_credits > credit_limit %}
+    <span class="font-semibold text-red-600">(Đã vượt giới hạn {{ credit_limit }})</span>
     {% endif %}
   </p>
 
@@ -139,14 +164,21 @@
             <button class="cursor-not-allowed rounded bg-gray-400 px-3 py-1 text-white" disabled>Đã đăng ký</button>
             {% elif selected_training_program_semester and current_training_program_semester and selected_training_program_semester != current_training_program_semester %}
             <button class="cursor-not-allowed rounded bg-gray-400 px-3 py-1 text-white" disabled>Chỉ xem</button>
+            {% elif section_block_reasons.get(s.id) %}
+            <button
+              class="cursor-not-allowed rounded bg-gray-400 px-3 py-1 text-white"
+              title="{{ section_block_reasons.get(s.id) }}"
+              disabled
+            >Không thể đăng ký</button>
             {% elif section_capacity - registered_count == 0 or (practice and practice_capacity - practice_registered_count == 0) %}
             <button class="rounded bg-gray-400 px-3 py-1 text-white" disabled>Hết chỗ</button>
             {% else %}
             <form method="POST" action="{{ url_for('register_course') }}">
               <input type="hidden" name="class_section_id" value="{{ s.id }}">
-              <input type="hidden" name="course" value="{{ selected_course_id }}">
+              <input type="hidden" name="course_query" value="{{ selected_course_query }}">
               <input type="hidden" name="faculty" value="{{ selected_faculty_id }}">
               <input type="hidden" name="training_program_semester" value="{{ selected_training_program_semester }}">
+              <input type="hidden" name="page" value="{{ page }}">
               <button type="submit" class="rounded bg-blue-500 px-3 py-1 text-white hover:bg-blue-600">Chọn</button>
             </form>
             {% endif %}
@@ -156,6 +188,22 @@
       </tbody>
     </table>
   </div>
+  {% if total_pages > 1 %}
+  <div class="mt-4 flex items-center justify-center gap-2">
+    {% if page > 1 %}
+    <a class="rounded border px-3 py-1 text-sm hover:bg-slate-100" href="{{ url_for('index', course_query=selected_course_query, faculty=selected_faculty_id, training_program_semester=selected_training_program_semester, page=page - 1) }}">Trước</a>
+    {% endif %}
+    {% for page_no in range(1, total_pages + 1) %}
+    <a
+      class="rounded border px-3 py-1 text-sm {% if page_no == page %}bg-blue-500 text-white{% else %}hover:bg-slate-100{% endif %}"
+      href="{{ url_for('index', course_query=selected_course_query, faculty=selected_faculty_id, training_program_semester=selected_training_program_semester, page=page_no) }}"
+    >{{ page_no }}</a>
+    {% endfor %}
+    {% if page < total_pages %}
+    <a class="rounded border px-3 py-1 text-sm hover:bg-slate-100" href="{{ url_for('index', course_query=selected_course_query, faculty=selected_faculty_id, training_program_semester=selected_training_program_semester, page=page + 1) }}">Sau</a>
+    {% endif %}
+  </div>
+  {% endif %}
 </div>
 
 <div class="mt-6 rounded-lg bg-white p-6 shadow">
@@ -198,9 +246,10 @@
         <td>
           <form method="POST" action="{{ url_for('cancel_course') }}">
             <input type="hidden" name="enrollment_id" value="{{ e.id }}">
-            <input type="hidden" name="course" value="{{ selected_course_id }}">
+            <input type="hidden" name="course_query" value="{{ selected_course_query }}">
             <input type="hidden" name="faculty" value="{{ selected_faculty_id }}">
             <input type="hidden" name="training_program_semester" value="{{ selected_training_program_semester }}">
+            <input type="hidden" name="page" value="{{ page }}">
             <button type="submit" class="rounded bg-red-500 px-3 py-1 text-white hover:bg-red-600">Hủy</button>
           </form>
         </td>
@@ -214,5 +263,71 @@
     <p>2024 Phòng Đào tạo - Đại học Mở</p>
     <p class="mt-1">Chính sách bảo mật • Điều khoản sử dụng</p>
   </footer>
+  <script>
+    document.querySelectorAll("[data-course-combobox]").forEach(function (combobox) {
+      const input = combobox.querySelector("[data-course-input]");
+      const toggle = combobox.querySelector("[data-course-toggle]");
+      const menu = combobox.querySelector("[data-course-menu]");
+      const options = Array.from(combobox.querySelectorAll("[data-course-option]"));
+
+      function openMenu() {
+        combobox.classList.add("is-open");
+        filterOptions();
+      }
+
+      function closeMenu() {
+        combobox.classList.remove("is-open");
+      }
+
+      function filterOptions() {
+        const term = input.value.trim().toLowerCase();
+        let visibleCount = 0;
+
+        options.forEach(function (option) {
+          const isVisible = !term || option.dataset.searchText.includes(term);
+          option.hidden = !isVisible;
+          if (isVisible) {
+            visibleCount += 1;
+          }
+        });
+
+        combobox.classList.toggle("has-no-results", visibleCount === 0);
+      }
+
+      input.addEventListener("focus", openMenu);
+      input.addEventListener("input", function () {
+        openMenu();
+        filterOptions();
+      });
+
+      toggle.addEventListener("click", function () {
+        if (combobox.classList.contains("is-open")) {
+          closeMenu();
+        } else {
+          input.focus();
+          openMenu();
+        }
+      });
+
+      options.forEach(function (option) {
+        option.addEventListener("click", function () {
+          input.value = option.dataset.value;
+          closeMenu();
+        });
+      });
+
+      document.addEventListener("click", function (event) {
+        if (!combobox.contains(event.target)) {
+          closeMenu();
+        }
+      });
+
+      input.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          closeMenu();
+        }
+      });
+    });
+  </script>
 </body>
 </html>

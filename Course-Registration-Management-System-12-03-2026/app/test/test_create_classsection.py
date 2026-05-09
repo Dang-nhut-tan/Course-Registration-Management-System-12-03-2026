@@ -185,7 +185,6 @@ def make_class_section_form(**overrides):
         "max_students": 50,
         "start_date": datetime(2026, 5, 1),
         "end_date": datetime(2026, 8, 1),
-        "registration_deadline": datetime(2026, 4, 20),
     }
     data.update(overrides)
 
@@ -252,7 +251,6 @@ def test_after_model_change_saves_selected_schedule_time(test_app, test_session,
             max_students=50,
             start_date=datetime(2026, 5, 1),
             end_date=datetime(2026, 8, 1),
-            registration_deadline=datetime(2026, 4, 20),
             section_type=ClassSectionType.THEORY,
         )
         form = make_class_section_form(

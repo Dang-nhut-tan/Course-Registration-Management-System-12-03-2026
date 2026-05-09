@@ -55,6 +55,109 @@
     border: 1px solid #e5e7eb;
 }
 
+.course-search {
+    position: relative;
+}
+
+.course-search__input {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 16px;
+    line-height: 24px;
+    padding: 8px 38px 8px 12px;
+}
+
+.course-search__input:focus {
+    border-color: #111827;
+    outline: none;
+}
+
+.course-search__toggle {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    width: 38px;
+    height: calc(100% - 2px);
+    border: 0;
+    border-radius: 0 4px 4px 0;
+    background: #ffffff;
+    cursor: pointer;
+}
+
+.course-search__toggle::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid #9ca3af;
+    content: "";
+    transform: translate(-50%, -35%);
+}
+
+.course-search__menu {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 2px);
+    left: 0;
+    display: none;
+    width: 100%;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+}
+
+.course-search.is-open .course-search__menu {
+    display: block;
+}
+
+.course-search__option {
+    display: block;
+    width: 100%;
+    border: 0;
+    background: #ffffff;
+    color: #111827;
+    cursor: pointer;
+    padding: 10px 12px;
+    text-align: left;
+}
+
+.course-search__option:hover,
+.course-search__option.is-active {
+    background: #eef6ff;
+}
+
+.course-search__name {
+    display: block;
+    font-size: 16px;
+    line-height: 22px;
+}
+
+.course-search__code {
+    display: block;
+    margin-top: 2px;
+    color: #111827;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 18px;
+}
+
+.course-search__empty {
+    display: none;
+    padding: 12px;
+    color: #64748b;
+    font-style: italic;
+}
+
+.course-search.has-no-results .course-search__empty {
+    display: block;
+}
+
 @media (max-width: 640px) {
     .student-nav {
         align-items: stretch;
