@@ -167,8 +167,8 @@ class TeacherCourse(db.Model):
     teacher_id = Column(Integer, ForeignKey("teachers.id"), primary_key=True)
     course_id = Column(Integer, ForeignKey("courses.id"), primary_key=True)
 
-    teacher = relationship("Teacher")
-    course = relationship("Course")
+    teacher = relationship("Teacher", backref="teacher_courses")
+    course = relationship("Course", backref="teacher_courses")
 
 
 class Student(db.Model):
