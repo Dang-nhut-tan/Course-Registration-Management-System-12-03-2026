@@ -167,6 +167,9 @@ class TeacherCourse(db.Model):
     teacher_id = Column(Integer, ForeignKey("teachers.id"), primary_key=True)
     course_id = Column(Integer, ForeignKey("courses.id"), primary_key=True)
 
+    teacher = relationship("Teacher")
+    course = relationship("Course")
+
 
 class Student(db.Model):
     __tablename__ = "students"

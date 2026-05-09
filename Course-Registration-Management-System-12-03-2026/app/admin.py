@@ -884,6 +884,48 @@ class CoursePrerequisiteView(BaseView):
 
         return super(CoursePrerequisiteView, self).update_model(form, model)
 
+class TeacherCourseView(BaseView):
+    column_list = ("teacher", "course")
+    column_labels = {
+        "teacher": "Teacher",
+        "course": "Course",
+    }
+    form_columns = ("teacher", "course")
+
+    def is_duplicate_teacher_course(self, form, model=None):
+        teacher = form.teacher.data
+        course = form.course.data
+        if not teacher or not course:
+            return False
+
+        query = TeacherCourse.query.filter_by(
+            teacher_id=teacher.id,
+            course_id=course.id,
+        )
+        if model:
+            query = query.filter(
+                (TeacherCourse.teacher_id != model.teacher_id) |
+                (TeacherCourse.course_id != model.course_id)
+            )
+
+        if query.first():
+            flash("Giáo viên này đã được gán cho môn học đã chọn.", "error")
+            return True
+
+        return False
+
+    def create_model(self, form):
+        if self.is_duplicate_teacher_course(form):
+            return False
+
+        return super(TeacherCourseView, self).create_model(form)
+
+    def update_model(self, form, model):
+        if self.is_duplicate_teacher_course(form, model):
+            return False
+
+        return super(TeacherCourseView, self).update_model(form, model)
+
 class TeacherView(BaseView):
     column_display_pk = True
     column_list = ("id", "name")
@@ -1048,6 +1090,7 @@ admin.add_view(ClassSectionView(ClassSection, db.session))
 admin.add_view(ScheduleView(Schedule, db.session))
 admin.add_view(RoomView(Room, db.session))
 admin.add_view(TeacherView(Teacher, db.session))
+admin.add_view(TeacherCourseView(TeacherCourse, db.session))
 admin.add_view(FacultyView(Faculty, db.session))
 admin.add_view(CoursePrerequisiteView(CoursePrerequisite, db.session))
 admin.add_view(CampusView(Campus, db.session))
