@@ -133,6 +133,10 @@
     const studentClassId = studentClassSelect ? studentClassSelect.value : '';
     const semester = semesterInput ? semesterInput.value : '';
     const sectionType = sectionTypeSelect ? sectionTypeSelect.value : '';
+    const selectedRoom = data.rooms.find(function (room) {
+      return room.id === roomSelect.value;
+    });
+    const campusId = selectedRoom ? selectedRoom.campus_id : '';
 
     clearOptions(linkedSectionSelect);
     addOption(linkedSectionSelect, '__None', '');
@@ -147,17 +151,8 @@
       const matchCourse = !courseId || section.course_id === courseId;
       const matchSemester = !semester || section.semester === semester;
       const matchStudentClass = !studentClassId || section.student_class_id === studentClassId;
-      return matchCourse && matchSemester && matchStudentClass && !section.is_linked;
-    });
-
-    matches.sort(function (a, b) {
-      if (a.room_type === 'practice' && b.room_type !== 'practice') {
-        return -1;
-      }
-      if (a.room_type !== 'practice' && b.room_type === 'practice') {
-        return 1;
-      }
-      return Number(a.id) - Number(b.id);
+      const matchCampus = !campusId || section.campus_id === campusId;
+      return matchCourse && matchSemester && matchStudentClass && matchCampus && !section.is_linked;
     });
 
     matches.forEach(function (section) {
@@ -173,7 +168,6 @@
   function updateFilters() {
     filterTeachers();
     filterRooms();
-    filterLinkedSections();
   }
 
   [courseSelect, studentClassSelect, sectionTypeSelect, semesterInput, daySelect, startTimeSelect, endTimeSelect].forEach(function (field) {
@@ -182,6 +176,7 @@
       field.addEventListener('keyup', updateFilters);
     }
   });
+  roomSelect.addEventListener('change', filterLinkedSections);
 
   updateFilters();
 }());

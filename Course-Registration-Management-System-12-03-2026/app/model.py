@@ -170,6 +170,13 @@ class TeacherCourse(db.Model):
     teacher = relationship("Teacher", backref="teacher_courses")
     course = relationship("Course", backref="teacher_courses")
 
+    def __str__(self):
+        if self.course and self.teacher:
+            return f"{self.course.name} - {self.teacher.name}"
+        if self.course:
+            return self.course.name
+        return f"TeacherCourse {self.teacher_id}, {self.course_id}"
+
 
 class Student(db.Model):
     __tablename__ = "students"

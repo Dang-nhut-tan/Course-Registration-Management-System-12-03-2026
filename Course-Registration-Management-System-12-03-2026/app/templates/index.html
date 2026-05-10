@@ -160,18 +160,8 @@
             {% endif %}
           </td>
           <td>
-            {% if s.id in registered_section_ids %}
-            <button class="cursor-not-allowed rounded bg-gray-400 px-3 py-1 text-white" disabled>Đã đăng ký</button>
-            {% elif selected_training_program_semester and current_training_program_semester and selected_training_program_semester != current_training_program_semester %}
+            {% if selected_training_program_semester and current_training_program_semester and selected_training_program_semester != current_training_program_semester %}
             <button class="cursor-not-allowed rounded bg-gray-400 px-3 py-1 text-white" disabled>Chỉ xem</button>
-            {% elif section_block_reasons.get(s.id) %}
-            <button
-              class="cursor-not-allowed rounded bg-gray-400 px-3 py-1 text-white"
-              title="{{ section_block_reasons.get(s.id) }}"
-              disabled
-            >Không thể đăng ký</button>
-            {% elif section_capacity - registered_count == 0 or (practice and practice_capacity - practice_registered_count == 0) %}
-            <button class="rounded bg-gray-400 px-3 py-1 text-white" disabled>Hết chỗ</button>
             {% else %}
             <form method="POST" action="{{ url_for('register_course') }}">
               <input type="hidden" name="class_section_id" value="{{ s.id }}">

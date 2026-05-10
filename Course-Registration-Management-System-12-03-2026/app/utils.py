@@ -552,16 +552,22 @@ def get_schedule_conflict(student_code, candidate_sections):
 
 def has_registered_same_course(student_code, candidate_sections):
     candidate_course_ids = {section.course_id for section in candidate_sections if section}
+    candidate_semesters = {section.semester for section in candidate_sections if section and section.semester}
     if not candidate_course_ids:
         return None
 
-    return db.session.query(Enrollment).join(
+    query = db.session.query(Enrollment).join(
         ClassSection, Enrollment.class_section_id == ClassSection.id
     ).filter(
         Enrollment.student_code == student_code,
         Enrollment.status == EnrollmentStatus.REGISTERED,
         ClassSection.course_id.in_(candidate_course_ids),
-    ).first()
+        ClassSection.end_date >= datetime.now(),
+    )
+    if candidate_semesters:
+        query = query.filter(ClassSection.semester.in_(candidate_semesters))
+
+    return query.first()
 
 
 def register_section(student_code, class_section_id):
