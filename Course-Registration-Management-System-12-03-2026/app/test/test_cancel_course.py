@@ -1,7 +1,11 @@
 from datetime import datetime, timedelta
 import pytest
 from app import db, utils
+<<<<<<< HEAD
 from app.model import ClassSection, ClassSectionType, Enrollment, EnrollmentStatus, StudentClassSection
+=======
+from app.model import ClassSection, ClassSectionType, Enrollment, EnrollmentStatus, Grade
+>>>>>>> b99f523 (Update UI and model)
 from app.test.test_base import test_app, test_session
 from app.test.test_registration_utils import add_course_with_section, seed_student_context
 
@@ -64,12 +68,51 @@ def test_cancel_after_two_weeks_fails(setup_data, test_app, test_session):
 
 def test_cancel_no_midterm_score(setup_data, test_app, test_session):
     with test_app.app_context():
+<<<<<<< feature/admin
         test_session.add(setup_data)
         actual_cancel, message = utils.cancel_registered_course("2354050999", setup_data.id)
         assert actual_cancel is True
+=======
+        seed_student_context(test_session)
+        add_course_with_section(test_session, course_id=1, section_id=1)
+
+        enrollment = Enrollment(
+            id=1,
+            student_code="2354050999",
+            class_section_id=1,
+            status=EnrollmentStatus.REGISTERED,
+        )
+<<<<<<< HEAD
+        score = StudentClassSection(
+            student_code="2354050999",
+            class_section_id=1,
+            score_midterm=8.0,
+        )
+        test_session.add_all([enrollment, score])
+=======
+        grade = Grade(
+            enrollment=enrollment,
+            midterm_score=8.0,
+        )
+        test_session.add_all([enrollment, grade])
+>>>>>>> b99f523 (Update UI and model)
+        test_session.commit()
+>>>>>>> main
 
 
+<<<<<<< feature/admin
 def test_cancel_with_midterm_score(setup_data, test_app, test_session):
+=======
+        assert success is False
+<<<<<<< HEAD
+=======
+        assert message == "Không thể hủy môn vì đã có điểm giữa kỳ"
+>>>>>>> b99f523 (Update UI and model)
+        assert enrollment.status == EnrollmentStatus.REGISTERED
+
+
+def test_cancel_registered_course_cancels_linked_practice_section(test_session, test_app):
+>>>>>>> main
     with test_app.app_context():
         test_session.add(setup_data)
         score = StudentClassSection(

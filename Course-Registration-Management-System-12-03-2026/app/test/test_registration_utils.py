@@ -339,6 +339,43 @@ def test_registered_courses_hides_ended_and_previous_semester_enrollments(test_s
         assert [enrollment.class_section_id for enrollment in registered_courses] == [current_section.id]
 
 
+def test_register_section_ignores_ended_same_course_enrollment(test_session, test_app):
+    with test_app.app_context():
+        seed_student_context(test_session)
+        course, current_section = add_course_with_section(
+            test_session,
+            course_id=1,
+            section_id=1,
+        )
+        ended_section = ClassSection(
+            id=2,
+            name="Old section",
+            course_id=course.id,
+            semester="2025-2",
+            max_students=50,
+            start_date=datetime.now() - timedelta(days=90),
+            end_date=datetime.now() - timedelta(days=1),
+        )
+        test_session.add_all([
+            ended_section,
+            Enrollment(
+                student_code="2354050999",
+                class_section_id=ended_section.id,
+                status=EnrollmentStatus.REGISTERED,
+            ),
+        ])
+        test_session.commit()
+
+        success, message = utils.register_section("2354050999", current_section.id)
+
+        assert success is True
+        assert Enrollment.query.filter_by(
+            student_code="2354050999",
+            class_section_id=current_section.id,
+            status=EnrollmentStatus.REGISTERED,
+        ).count() == 1
+
+
 def test_register_section_uses_faculty_registration_deadline(test_session, test_app):
     with test_app.app_context():
         seed_student_context(test_session)

@@ -1,7 +1,7 @@
 import re
 import typing as t
 from flask_admin._types import T_SQLALCHEMY_MODEL
-from flask import flash, redirect, url_for, request
+from flask import flash, has_request_context, redirect, url_for, request
 from wtforms import Form, SelectField
 from flask_login import current_user
 from datetime import datetime, time
@@ -10,7 +10,8 @@ from sqlalchemy.exc import IntegrityError
 from app import app, db
 from flask_admin import Admin, AdminIndexView, expose
 from flask_admin.contrib.sqla import ModelView
-from app.model import Course, ClassSection, ClassSectionType, Enrollment, EnrollmentStatus, Schedule, Room, UserRole, Campus, Teacher, TeacherCourse, CoursePrerequisite, CourseMajor, Faculty, Student, StudentClass
+from flask_admin.model.filters import BaseFilter
+from app.model import Course, ClassSection, ClassSectionType, Enrollment, EnrollmentStatus, Grade, Schedule, Room, UserRole, Campus, Teacher, TeacherCourse, CoursePrerequisite, CourseMajor, Faculty, Student, StudentClass
 from app.utils import check_room_conflict, check_teacher_conflict
 
 DEFAULT_START_TIME = time(7, 30)
@@ -184,7 +185,12 @@ class ClassSectionView(BaseView):
                 for teacher in Teacher.query.all()
             ],
             "rooms": [
-                {"id": str(room.id), "name": str(room), "room_type": room.room_type or ""}
+                {
+                    "id": str(room.id),
+                    "name": str(room),
+                    "room_type": room.room_type or "",
+                    "campus_id": str(room.campus_id or ""),
+                }
                 for room in Room.query.all()
             ],
             "practice_sections": [
@@ -195,6 +201,7 @@ class ClassSectionView(BaseView):
                     "semester": section.semester or "",
                     "name": str(section),
                     "room_type": section.room.room_type if section.room else "",
+                    "campus_id": str(section.room.campus_id) if section.room else "",
                     "is_linked": str(section.id) in linked_section_ids,
                 }
                 for section in ClassSection.query.filter(
@@ -266,14 +273,9 @@ class ClassSectionView(BaseView):
             return ClassSectionType.THEORY
         return section_type or ClassSectionType.THEORY
 
-    def find_available_teacher(self, form, model=None):
-        course = self.get_course_from_form(form)
-        semester = self.get_semester_from_form(form)
-        day = self.get_schedule_day_from_form(form)
-        start_time = self.get_schedule_start_time_from_form(form)
-        end_time = self.get_schedule_end_time_from_form(form)
+    def get_teacher_candidates(self, course):
         if not course:
-            return None
+            return [], []
 
         teacher_ids = [
             teacher_id
@@ -285,50 +287,103 @@ class ClassSectionView(BaseView):
         elif course.faculty_id:
             query = query.filter(Teacher.faculty_id == course.faculty_id)
 
-        if not day:
-            return query.order_by(Teacher.id).first()
+        return query.order_by(Teacher.id).all(), teacher_ids
 
-        used_teacher_ids = db.session.query(ClassSection.teacher_id).join(Schedule).filter(
-            ClassSection.semester == semester,
-            ClassSection.teacher_id.isnot(None),
-            Schedule.day_of_week == day,
-            Schedule.start_time < end_time,
-            Schedule.end_time > start_time,
+    def get_room_type_from_form(self, form):
+        return "practice" if self.get_section_type_from_form(form) == ClassSectionType.PRACTICE else "theory"
+
+    def get_section_room(self, form, model=None):
+        return self.get_form_data(form, "room") or getattr(model, "room", None)
+
+    def find_available_teacher(self, form, model=None):
+        course = self.get_course_from_form(form)
+        semester = self.get_semester_from_form(form)
+        day = self.get_schedule_day_from_form(form)
+        start_time = self.get_schedule_start_time_from_form(form)
+        end_time = self.get_schedule_end_time_from_form(form)
+        candidates, _ = self.get_teacher_candidates(course)
+        return next(
+            (
+                teacher
+                for teacher in candidates
+                if not day or not self.has_teacher_busy(teacher.id, semester, day, start_time, end_time, model)
+            ),
+            None,
         )
-        if model and model.id:
-            used_teacher_ids = used_teacher_ids.filter(ClassSection.id != model.id)
 
-        return query.filter(~Teacher.id.in_(used_teacher_ids)).order_by(Teacher.id).first()
+    def get_teacher_unavailable_reason(self, form, model=None):
+        course = self.get_course_from_form(form)
+        semester = self.get_semester_from_form(form)
+        day = self.get_schedule_day_from_form(form)
+        start_time = self.get_schedule_start_time_from_form(form)
+        end_time = self.get_schedule_end_time_from_form(form)
+        if not course:
+            return "Vui lòng chọn môn học trước khi hệ thống tự chọn giáo viên."
+
+        candidates, teacher_ids = self.get_teacher_candidates(course)
+        if not candidates and teacher_ids:
+            return f"Môn {course.name} có phân công Teacher Course nhưng không tìm thấy giáo viên tương ứng."
+        if not candidates:
+            return f"Không có giáo viên phù hợp cho môn {course.name}; hãy thêm Teacher Course hoặc giáo viên cùng khoa."
+        if not day:
+            return f"Không thể kiểm tra giáo viên trống cho môn {course.name} vì chưa chọn thứ học."
+
+        busy_teachers = [
+            teacher
+            for teacher in candidates
+            if self.has_teacher_busy(teacher.id, semester, day, start_time, end_time, model)
+        ]
+        if len(busy_teachers) == len(candidates):
+            names = ", ".join(teacher.name for teacher in busy_teachers)
+            return (
+                f"Tất cả giáo viên phù hợp cho môn {course.name} đều bận vào thứ {day} "
+                f"({start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')}): {names}."
+            )
+
+        return f"Không tìm thấy giáo viên phù hợp còn trống cho môn {course.name}."
 
     def find_available_room(self, form, model=None):
         semester = self.get_semester_from_form(form)
         day = self.get_schedule_day_from_form(form)
         start_time = self.get_schedule_start_time_from_form(form)
         end_time = self.get_schedule_end_time_from_form(form)
-        section_type = self.get_section_type_from_form(form)
-        room_type = "practice" if section_type == ClassSectionType.PRACTICE else "theory"
+        rooms = Room.query.filter(Room.room_type == self.get_room_type_from_form(form)).order_by(Room.id).all()
+        return next(
+            (
+                room
+                for room in rooms
+                if not day or not self.has_room_busy(room.id, semester, day, start_time, end_time, model)
+            ),
+            None,
+        )
 
-        if day:
-            used_room_ids = db.session.query(ClassSection.room_id).join(Schedule).filter(
-                ClassSection.semester == semester,
-                ClassSection.room_id.isnot(None),
-                Schedule.day_of_week == day,
-                Schedule.start_time < end_time,
-                Schedule.end_time > start_time,
+    def get_room_unavailable_reason(self, form, model=None):
+        semester = self.get_semester_from_form(form)
+        day = self.get_schedule_day_from_form(form)
+        start_time = self.get_schedule_start_time_from_form(form)
+        end_time = self.get_schedule_end_time_from_form(form)
+        room_type = self.get_room_type_from_form(form)
+        room_label = "thực hành" if room_type == "practice" else "lý thuyết"
+
+        rooms = Room.query.filter(Room.room_type == room_type).order_by(Room.id).all()
+        if not rooms:
+            return f"Không có phòng {room_label} trong hệ thống."
+        if not day:
+            return f"Không thể kiểm tra phòng {room_label} trống vì chưa chọn thứ học."
+
+        busy_rooms = [
+            room
+            for room in rooms
+            if self.has_room_busy(room.id, semester, day, start_time, end_time, model)
+        ]
+        if len(busy_rooms) == len(rooms):
+            names = ", ".join(str(room) for room in busy_rooms)
+            return (
+                f"Tất cả phòng {room_label} đều bận vào thứ {day} "
+                f"({start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')}): {names}."
             )
-            if model and model.id:
-                used_room_ids = used_room_ids.filter(ClassSection.id != model.id)
-        else:
-            used_room_ids = []
 
-        room = Room.query.filter(
-            Room.room_type == room_type,
-            ~Room.id.in_(used_room_ids),
-        ).order_by(Room.id).first()
-        if room:
-            return room
-
-        return Room.query.filter(Room.room_type == room_type).order_by(Room.id).first()
+        return f"Không tìm thấy phòng {room_label} còn trống cho kỳ {semester}."
 
     def has_teacher_busy(self, teacher_id, semester, day, start_time, end_time, model=None):
         query = db.session.query(Schedule).join(ClassSection).filter(
@@ -354,11 +409,22 @@ class ClassSectionView(BaseView):
             query = query.filter(ClassSection.id != model.id)
         return query.first() is not None
 
+    def get_practice_schedule_slots(self, form):
+        theory_day = self.get_schedule_day_from_form(form)
+        theory_start = self.get_schedule_start_time_from_form(form)
+        theory_end = self.get_schedule_end_time_from_form(form)
+        if theory_day and theory_start < time(12, 0) and theory_end <= time(12, 0):
+            return [(theory_day, time(13, 0), time(17, 30))]
+        if theory_day and theory_start >= time(12, 0):
+            return [(theory_day, time(7, 30), time(12, 0))]
+        return []
+
     def find_practice_section(self, form, model=None):
         course = self.get_course_from_form(form)
         student_class = self.get_form_data(form, "student_class")
         semester = self.get_semester_from_form(form)
         section_type = self.get_section_type_from_form(form)
+        theory_room = self.get_section_room(form, model)
         if not course or section_type == ClassSectionType.PRACTICE:
             return None
 
@@ -379,9 +445,14 @@ class ClassSectionView(BaseView):
             linked_ids = linked_ids.filter(ClassSection.id != model.id)
         linked_ids = {linked_id for linked_id, in linked_ids}
 
-        fallback_section = None
         for practice_section in query.order_by(ClassSection.id).all():
             if practice_section.id in linked_ids:
+                continue
+            if (
+                theory_room
+                and practice_section.room
+                and practice_section.room.campus_id != theory_room.campus_id
+            ):
                 continue
 
             registered_count = Enrollment.query.filter(
@@ -391,24 +462,93 @@ class ClassSectionView(BaseView):
             if registered_count >= practice_section.max_students:
                 continue
 
-            if practice_section.room and practice_section.room.room_type == "practice":
-                return practice_section
+            return practice_section
 
-            if not fallback_section:
-                fallback_section = practice_section
+        return None
 
-        return fallback_section
+    def ensure_practice_section(self, form, model):
+        if self.get_section_type_from_form(form) == ClassSectionType.PRACTICE:
+            return
+        if model.linked_section_id:
+            return
+
+        practice_section = self.find_practice_section(form, model)
+        if practice_section:
+            model.linked_section = practice_section
+            db.session.commit()
+            return
+
+        course = self.get_course_from_form(form)
+        semester = self.get_semester_from_form(form)
+        theory_room = self.get_section_room(form, model)
+        resources = None
+        if course and semester and theory_room:
+            teachers, _ = self.get_teacher_candidates(course)
+            rooms = Room.query.filter_by(
+                room_type="practice",
+                campus_id=theory_room.campus_id,
+            ).order_by(Room.id).all()
+            for day, start_time, end_time in self.get_practice_schedule_slots(form):
+                room = next(
+                    (
+                        item
+                        for item in rooms
+                        if not self.has_room_busy(item.id, semester, day, start_time, end_time, model)
+                    ),
+                    None,
+                )
+                teacher = next(
+                    (
+                        item
+                        for item in teachers
+                        if not self.has_teacher_busy(item.id, semester, day, start_time, end_time, model)
+                    ),
+                    None,
+                )
+                if room and teacher:
+                    resources = teacher, room, day, start_time, end_time
+                    break
+        if not resources:
+            if has_request_context():
+                flash("Không tìm thấy phòng thực hành cùng cơ sở và giáo viên còn trống để tự tạo lớp thực hành.", "warning")
+            return
+
+        teacher, room, day, start_time, end_time = resources
+        practice_section = ClassSection(
+            name=model.name,
+            course_id=model.course_id,
+            student_class_id=model.student_class_id,
+            teacher_id=teacher.id,
+            room_id=room.id,
+            semester=model.semester,
+            max_students=model.max_students,
+            start_date=model.start_date,
+            end_date=model.end_date,
+            section_type=ClassSectionType.PRACTICE,
+        )
+        db.session.add(practice_section)
+        db.session.flush()
+        db.session.add(
+            Schedule(
+                class_section_id=practice_section.id,
+                day_of_week=day,
+                start_time=start_time,
+                end_time=end_time,
+            )
+        )
+        model.linked_section = practice_section
+        db.session.commit()
 
     def can_auto_fill_class_section(self, form, model=None):
         if self.get_course_from_form(form) is None:
             return True
 
         if not self.get_form_data(form, "teacher") and not self.find_available_teacher(form, model):
-            flash("Không tìm thấy giáo viên phù hợp còn trống cho môn học và kỳ này.", "error")
+            flash(self.get_teacher_unavailable_reason(form, model), "error")
             return False
 
         if not self.get_form_data(form, "room") and not self.find_available_room(form, model):
-            flash("Không tìm thấy phòng phù hợp còn trống cho kỳ này.", "error")
+            flash(self.get_room_unavailable_reason(form, model), "error")
             return False
 
         selected_teacher = self.get_form_data(form, "teacher")
@@ -466,13 +606,9 @@ class ClassSectionView(BaseView):
             schedule.end_time = self.get_schedule_end_time_from_form(form)
             db.session.commit()
 
-        return super(ClassSectionView, self).after_model_change(form, model, is_created)
+        self.ensure_practice_section(form, model)
 
-    def auto_link_practice_section(self, form, model=None):
-        linked_section_field = self.get_form_field(form, "linked_section")
-        if not linked_section_field or isinstance(linked_section_field.data, ClassSection):
-            return
-        linked_section_field.data = self.find_practice_section(form, model)
+        return super(ClassSectionView, self).after_model_change(form, model, is_created)
 
     def is_valid_linked_section(self, form, model=None):
         linked_section = getattr(getattr(form, "linked_section", None), "data", None)
@@ -496,6 +632,11 @@ class ClassSectionView(BaseView):
 
         if student_class and linked_section.student_class_id != student_class.id:
             flash("Lớp thực hành liên kết phải cùng lớp sinh viên.", "error")
+            return False
+
+        room = self.get_form_data(form, "room")
+        if room and linked_section.room and linked_section.room.campus_id != room.campus_id:
+            flash("Phòng thực hành liên kết phải cùng cơ sở với phòng lý thuyết.", "error")
             return False
 
         return True
@@ -677,6 +818,7 @@ class ScheduleView(BaseView):
 
 
 class CourseView(BaseView):
+    form_columns = ("faculty", "name", "credits", "is_shared")
     form_args = {
         'credits': {
             'render_kw': {
@@ -840,6 +982,7 @@ class TeacherCourseView(BaseView):
 class TeacherView(BaseView):
     column_display_pk = True
     column_list = ("id", "name")
+    form_columns = ("name",)
     column_labels = {
         "id": "Teacher ID",
         "name": "Name",
@@ -996,9 +1139,172 @@ class FacultyView(BaseView):
             return False
         return super(FacultyView, self).update_model(form, model)
 
+class GradeCourseFilter(BaseFilter):
+    def apply(self, query, value):
+        return query.filter(
+            Grade.enrollment.has(
+                Enrollment.class_section.has(
+                    ClassSection.course.has(Course.name.ilike(f"%{value}%"))
+                )
+            )
+        )
+
+    def operation(self):
+        return "contains"
+
+
+class GradeClassSectionFilter(BaseFilter):
+    def apply(self, query, value):
+        return query.filter(
+            Grade.enrollment.has(
+                Enrollment.class_section.has(ClassSection.name.ilike(f"%{value}%"))
+            )
+        )
+
+    def operation(self):
+        return "contains"
+
+
+class GradeStudentFilter(BaseFilter):
+    def apply(self, query, value):
+        return query.filter(
+            Grade.enrollment.has(Enrollment.student.has(Student.name.ilike(f"%{value}%")))
+        )
+
+    def operation(self):
+        return "contains"
+
+
+class GradeStudentCodeFilter(BaseFilter):
+    def apply(self, query, value):
+        return query.filter(
+            Grade.enrollment.has(Enrollment.student_code.ilike(f"%{value}%"))
+        )
+
+    def operation(self):
+        return "contains"
+
+
+class GradeView(BaseView):
+    column_list = (
+        "student_name",
+        "student_code",
+        "course_name",
+        "class_section_name",
+        "midterm_score",
+        "final_score",
+        "graded_at",
+    )
+    form_columns = ("enrollment", "midterm_score", "final_score", "graded_at")
+    column_filters = (
+        GradeCourseFilter("Course"),
+        GradeClassSectionFilter("Class section"),
+        GradeStudentFilter("Student"),
+        GradeStudentCodeFilter("Student code"),
+    )
+    column_labels = {
+        "student_name": "Student",
+        "student_code": "Student code",
+        "course_name": "Course",
+        "class_section_name": "Class section",
+        "midterm_score": "Midterm score",
+        "final_score": "Final score",
+        "graded_at": "Graded at",
+        "enrollment": "Enrollment",
+    }
+    form_args = {
+        "enrollment": {
+            "label": "Enrollment",
+            "description": "Student code - student name | course | class section | semester",
+        },
+        "midterm_score": {"label": "Midterm score"},
+        "final_score": {"label": "Final score"},
+        "graded_at": {"label": "Graded at"},
+    }
+
+    def _get_enrollment(self, model):
+        return model.enrollment if model and model.enrollment else None
+
+    def _get_section(self, model):
+        enrollment = self._get_enrollment(model)
+        return enrollment.class_section if enrollment and enrollment.class_section else None
+
+    def _get_course(self, model):
+        section = self._get_section(model)
+        return section.course if section and section.course else None
+
+    def _get_student(self, model):
+        enrollment = self._get_enrollment(model)
+        return enrollment.student if enrollment and enrollment.student else None
+
+    def _student_name_formatter(self, context, model, name):
+        student = self._get_student(model)
+        return student.name if student else "-"
+
+    def _student_code_formatter(self, context, model, name):
+        enrollment = self._get_enrollment(model)
+        return enrollment.student_code if enrollment else "-"
+
+    def _course_name_formatter(self, context, model, name):
+        course = self._get_course(model)
+        return course.name if course else "-"
+
+    def _class_section_name_formatter(self, context, model, name):
+        section = self._get_section(model)
+        return section.name if section and section.name else "-"
+
+    def _graded_at_formatter(self, context, model, name):
+        return model.graded_at.strftime("%Y-%m-%d %H:%M:%S") if model.graded_at else "-"
+
+    def get_query(self):
+        return (
+            super()
+            .get_query()
+            .join(Enrollment, Grade.enrollment_id == Enrollment.id)
+            .join(ClassSection, Enrollment.class_section_id == ClassSection.id)
+            .join(Course, ClassSection.course_id == Course.id)
+            .join(Student, Enrollment.student_code == Student.student_code)
+        )
+
+    def get_count_query(self):
+        return (
+            super()
+            .get_count_query()
+            .join(Enrollment, Grade.enrollment_id == Enrollment.id)
+            .join(ClassSection, Enrollment.class_section_id == ClassSection.id)
+            .join(Course, ClassSection.course_id == Course.id)
+            .join(Student, Enrollment.student_code == Student.student_code)
+        )
+
+    def create_form(self, obj=None):
+        form = super().create_form(obj)
+        if hasattr(form, "graded_at") and not form.graded_at.data:
+            form.graded_at.data = datetime.now()
+        return form
+
+    def edit_form(self, obj=None):
+        form = super().edit_form(obj)
+        if hasattr(form, "graded_at") and not form.graded_at.data:
+            form.graded_at.data = datetime.now()
+        return form
+
+    def on_model_change(self, form, model, is_created):
+        if not model.graded_at:
+            model.graded_at = datetime.now()
+        return super().on_model_change(form, model, is_created)
+
+    column_formatters = {
+        "student_name": _student_name_formatter,
+        "student_code": _student_code_formatter,
+        "course_name": _course_name_formatter,
+        "class_section_name": _class_section_name_formatter,
+        "graded_at": _graded_at_formatter,
+    }
+
 admin.add_view(CourseView(Course, db.session))
 admin.add_view(ClassSectionView(ClassSection, db.session))
 admin.add_view(ScheduleView(Schedule, db.session))
+admin.add_view(GradeView(Grade, db.session))
 admin.add_view(RoomView(Room, db.session))
 admin.add_view(TeacherView(Teacher, db.session))
 admin.add_view(TeacherCourseView(TeacherCourse, db.session))

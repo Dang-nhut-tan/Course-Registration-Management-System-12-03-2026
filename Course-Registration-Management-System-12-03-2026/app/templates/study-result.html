@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kết quả học tập</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/student-pages.css') }}"
+  />
+</head>
+<body class="bg-gray-100 student-page min-h-screen">
+  <div class="flex items-center justify-between p-4">
+    <div class="flex items-center gap-3">
+      <span class="text-sm font-semibold">{{ student_code }} - {{ student_name }}</span>
+    </div>
+    <label class="student-nav" aria-label="Tiện ích sinh viên">
+      <span class="student-nav__label">Tiện ích sinh viên</span>
+      <select class="student-nav__select" onchange="window.location.href=this.value">
+        <option value="{{ url_for('index') }}">Đăng ký môn học</option>
+        <option value="{{ url_for('timetable') }}">Xem thời khóa biểu</option>
+        <option value="{{ url_for('study_result') }}" selected>Kết quả học tập</option>
+        <option value="{{ url_for('logout') }}">Đăng xuất</option>
+      </select>
+    </label>
+  </div>
+
+  <main class="p-6">
+    <section class="rounded-lg border border-blue-500 bg-white p-4 shadow">
+      <div class="mb-4 flex items-center justify-between border-b border-blue-500 pb-3">
+        <h1 class="text-lg font-bold uppercase text-slate-900">Kết quả học tập</h1>
+      </div>
+
+      {% if semester_results %}
+        {% for semester in semester_results %}
+        <section class="mb-6">
+          <h2 class="study-semester-title">Học kỳ {{ semester.semester }}</h2>
+
+          <div class="overflow-x-auto">
+            <table class="study-result-table w-full min-w-[1100px] text-center text-sm">
+              <thead>
+                <tr>
+                  <th>STT</th>
+                  <th>Mã MH</th>
+                  <th>Nhóm/tổ môn học</th>
+                  <th class="text-left">Tên môn học</th>
+                  <th>Số tín chỉ</th>
+                  <th>Quá trình</th>
+                  <th>Điểm thi</th>
+                  <th>Điểm TK (10)</th>
+                  <th>Điểm TK (4)</th>
+                  <th>Điểm TK (C)</th>
+                  <th>Kết quả</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in semester.courses %}
+                <tr>
+                  <td>{{ loop.index }}</td>
+                  <td>{{ item.course.id }}</td>
+                  <td>{{ item.section.name or '-' }}</td>
+                  <td class="text-left">{{ item.course.name }}</td>
+                  <td>{{ item.course.credits }}</td>
+                  <td>{{ item.midterm_score if item.midterm_score is not none else '-' }}</td>
+                  <td>{{ item.final_score if item.final_score is not none else '-' }}</td>
+                  <td>{{ item.total_score if item.total_score is not none else '-' }}</td>
+                  <td>{{ item.scale_4_score if item.scale_4_score is not none else '-' }}</td>
+                  <td>{{ item.letter_score or '-' }}</td>
+                  <td>
+                    {% if item.result == 'PASS' %}
+                    <span class="font-bold text-blue-600">PASS</span>
+                    {% elif item.result == 'FAIL' %}
+                    <span class="font-bold text-red-500">FAIL</span>
+                    {% else %}
+                    -
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="study-summary">
+            <div>
+              <p>- Điểm trung bình học kỳ hệ 10: <strong>{{ semester.summary.semester_average_10 if semester.summary.semester_average_10 is not none else '-' }}</strong></p>
+              <p>- Điểm trung bình học kỳ hệ 4: <strong>{{ semester.summary.semester_average_4 if semester.summary.semester_average_4 is not none else '-' }}</strong></p>
+              <p>- Số tín chỉ đạt học kỳ: <strong>{{ semester.summary.semester_credits }}</strong></p>
+            </div>
+            <div>
+              <p>- Điểm trung bình tích lũy hệ 4: <strong>{{ semester.summary.cumulative_average_4 if semester.summary.cumulative_average_4 is not none else '-' }}</strong></p>
+              <p>- Số tín chỉ tích lũy: <strong>{{ semester.summary.cumulative_credits }}</strong></p>
+            </div>
+            <div>
+              <p>- Phân loại điểm trung bình HK: <strong>{{ semester.summary.classification }}</strong></p>
+            </div>
+          </div>
+        </section>
+        {% endfor %}
+      {% else %}
+        <div class="py-6 text-center text-slate-500">
+          Chưa có dữ liệu kết quả học tập.
+        </div>
+      {% endif %}
+    </section>
+  </main>
+</body>
+</html>
