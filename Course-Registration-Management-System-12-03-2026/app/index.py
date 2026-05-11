@@ -183,7 +183,6 @@ def index():
         message_type=request.args.get("msg_type", "")
     )
 
-#===========================================================
 @app.route("/timetable")
 def timetable():
     student_code = session.get("student_code")
@@ -208,6 +207,22 @@ def timetable():
         can_next_week=context["can_next_week"],
         term_start=context["term_start"],
         term_end=context["term_end"],
+    )
+
+@app.route("/study-result")
+@app.route("/grades")
+def study_result():
+    student_code = session.get("student_code")
+    if not student_code:
+        return redirect(url_for("login"))
+
+    semester_results = utils.build_study_result_context(student_code)
+
+    return render_template(
+        "study-result.html",
+        student_code=student_code,
+        student_name=session.get("student_name"),
+        semester_results=semester_results,
     )
 
 if __name__ == "__main__":

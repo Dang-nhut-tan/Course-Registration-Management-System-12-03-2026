@@ -1,7 +1,11 @@
 from datetime import datetime, timedelta
 
 from app import db, utils
+<<<<<<< HEAD
 from app.model import ClassSection, ClassSectionType, Enrollment, EnrollmentStatus, StudentClassSection
+=======
+from app.model import ClassSection, ClassSectionType, Enrollment, EnrollmentStatus, Grade
+>>>>>>> b99f523 (Update UI and model)
 from app.test.test_base import test_app, test_session
 from app.test.test_registration_utils import add_course_with_section, seed_student_context
 
@@ -172,17 +176,29 @@ def test_cancel_registered_course_has_midterm_score(test_session, test_app):
             class_section_id=1,
             status=EnrollmentStatus.REGISTERED,
         )
+<<<<<<< HEAD
         score = StudentClassSection(
             student_code="2354050999",
             class_section_id=1,
             score_midterm=8.0,
         )
         test_session.add_all([enrollment, score])
+=======
+        grade = Grade(
+            enrollment=enrollment,
+            midterm_score=8.0,
+        )
+        test_session.add_all([enrollment, grade])
+>>>>>>> b99f523 (Update UI and model)
         test_session.commit()
 
         success, message = utils.cancel_registered_course("2354050999", enrollment.id)
 
         assert success is False
+<<<<<<< HEAD
+=======
+        assert message == "Không thể hủy môn vì đã có điểm giữa kỳ"
+>>>>>>> b99f523 (Update UI and model)
         assert enrollment.status == EnrollmentStatus.REGISTERED
 
 

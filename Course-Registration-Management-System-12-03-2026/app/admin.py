@@ -10,7 +10,8 @@ from sqlalchemy.exc import IntegrityError
 from app import app, db
 from flask_admin import Admin, AdminIndexView, expose
 from flask_admin.contrib.sqla import ModelView
-from app.model import Course, ClassSection, ClassSectionType, Enrollment, EnrollmentStatus, Schedule, Room, UserRole, Campus, Teacher, TeacherCourse, CoursePrerequisite, CourseMajor, Faculty, Student, StudentClass
+from flask_admin.model.filters import BaseFilter
+from app.model import Course, ClassSection, ClassSectionType, Enrollment, EnrollmentStatus, Grade, Schedule, Room, UserRole, Campus, Teacher, TeacherCourse, CoursePrerequisite, CourseMajor, Faculty, Student, StudentClass
 from app.utils import check_room_conflict, check_teacher_conflict
 
 DEFAULT_START_TIME = time(7, 30)
@@ -60,95 +61,6 @@ class IndexView(AdminIndexView):
 
     def inaccessible_callback(self, name, **kwargs):
         return redirect(url_for('login', next=request.url))
-
-    @expose("/")
-    def index(self):
-        if not self.is_accessible():
-            return self.inaccessible_callback("index")
-
-        return self.render("admin/dashboard.html", dashboard=build_admin_dashboard())
-
-
-def build_admin_dashboard():
-    semester_rows = db.session.query(ClassSection.semester).distinct().order_by(ClassSection.semester.desc()).all()
-    semester_values = [row[0] for row in semester_rows if row[0] and "-" in row[0]]
-    current_semester = semester_values[0] if semester_values else ""
-    sections = ClassSection.query.filter_by(semester=current_semester).all() if current_semester else []
-
-    section_ids = [section.id for section in sections]
-    enrollments = Enrollment.query.filter(
-        Enrollment.status == EnrollmentStatus.REGISTERED,
-        Enrollment.class_section_id.in_(section_ids),
-    ).all() if section_ids else []
-
-    registered_counts = {}
-    for enrollment in enrollments:
-        registered_counts[enrollment.class_section_id] = registered_counts.get(enrollment.class_section_id, 0) + 1
-
-    underfilled_room_ids = set()
-    for section in sections:
-        room_capacity = section.room.capacity if section.room and section.room.capacity else section.max_students
-        capacity = min(section.max_students or 0, room_capacity or 0)
-        if section.room_id and capacity and registered_counts.get(section.id, 0) < capacity:
-            underfilled_room_ids.add(section.room_id)
-
-    registered_students = db.session.query(Enrollment.student_code).filter(
-        Enrollment.status == EnrollmentStatus.REGISTERED,
-        Enrollment.class_section_id.in_(section_ids),
-    ).distinct().count()
-    open_courses = db.session.query(ClassSection.course_id).filter(
-        ClassSection.id.in_(section_ids),
-    ).distinct().count() if section_ids else 0
-    used_room_ids = {section.room_id for section in sections if section.room_id}
-    empty_rooms = Room.query.filter(~Room.id.in_(list(used_room_ids))).count() if used_room_ids else Room.query.count()
-    recent_activities = [
-        {
-            "time": enrollment.registered_at.strftime("%H:%M") if enrollment.registered_at else "--:--",
-            "action": f"Sinh viên {enrollment.student_code} đã đăng ký Môn học {enrollment.class_section.course_id}",
-        }
-        for enrollment in Enrollment.query.filter(
-            Enrollment.class_section_id.in_(section_ids),
-        ).order_by(Enrollment.registered_at.desc()).limit(5).all()
-    ]
-    if not recent_activities:
-        recent_activities.append({"time": "--:--", "action": "Chưa có hoạt động gần đây"})
-
-    chart_rows = db.session.query(
-        Faculty.id,
-        func.count(Enrollment.id),
-    ).join(Course, Course.faculty_id == Faculty.id).join(
-        ClassSection, ClassSection.course_id == Course.id
-    ).join(
-        Enrollment, Enrollment.class_section_id == ClassSection.id
-    ).filter(
-        Enrollment.status == EnrollmentStatus.REGISTERED,
-        ClassSection.id.in_(section_ids),
-    ).group_by(Faculty.id).order_by(func.count(Enrollment.id).desc()).all()
-    max_chart_value = max([count for _, count in chart_rows], default=1)
-
-    return {
-        "semester": current_semester or "Không có kỳ phù hợp",
-        "stats": [
-            {"label": "Tổng sinh viên", "value": Student.query.count()},
-            {"label": "Môn học đang mở", "value": open_courses},
-            {"label": "Lớp học phần mở", "value": len(sections)},
-            {"label": "Sinh viên đã đăng ký", "value": registered_students},
-        ],
-        "room_stats": [
-            {"label": "Số phòng trống", "value": empty_rooms},
-            {"label": "Số phòng chưa đầy", "value": len(underfilled_room_ids)},
-            {"label": "Số lượng sinh viên", "value": registered_students},
-        ],
-        "activities": recent_activities,
-        "chart": [
-            {
-                "label": f"Khoa {faculty_id}",
-                "count": count,
-                "width": int((count / max_chart_value) * 100),
-            }
-            for faculty_id, count in chart_rows
-        ],
-    }
 
 admin = Admin(app=app, name="Course Registration Administration", index_view=IndexView())
 
@@ -1227,9 +1139,172 @@ class FacultyView(BaseView):
             return False
         return super(FacultyView, self).update_model(form, model)
 
+class GradeCourseFilter(BaseFilter):
+    def apply(self, query, value):
+        return query.filter(
+            Grade.enrollment.has(
+                Enrollment.class_section.has(
+                    ClassSection.course.has(Course.name.ilike(f"%{value}%"))
+                )
+            )
+        )
+
+    def operation(self):
+        return "contains"
+
+
+class GradeClassSectionFilter(BaseFilter):
+    def apply(self, query, value):
+        return query.filter(
+            Grade.enrollment.has(
+                Enrollment.class_section.has(ClassSection.name.ilike(f"%{value}%"))
+            )
+        )
+
+    def operation(self):
+        return "contains"
+
+
+class GradeStudentFilter(BaseFilter):
+    def apply(self, query, value):
+        return query.filter(
+            Grade.enrollment.has(Enrollment.student.has(Student.name.ilike(f"%{value}%")))
+        )
+
+    def operation(self):
+        return "contains"
+
+
+class GradeStudentCodeFilter(BaseFilter):
+    def apply(self, query, value):
+        return query.filter(
+            Grade.enrollment.has(Enrollment.student_code.ilike(f"%{value}%"))
+        )
+
+    def operation(self):
+        return "contains"
+
+
+class GradeView(BaseView):
+    column_list = (
+        "student_name",
+        "student_code",
+        "course_name",
+        "class_section_name",
+        "midterm_score",
+        "final_score",
+        "graded_at",
+    )
+    form_columns = ("enrollment", "midterm_score", "final_score", "graded_at")
+    column_filters = (
+        GradeCourseFilter("Course"),
+        GradeClassSectionFilter("Class section"),
+        GradeStudentFilter("Student"),
+        GradeStudentCodeFilter("Student code"),
+    )
+    column_labels = {
+        "student_name": "Student",
+        "student_code": "Student code",
+        "course_name": "Course",
+        "class_section_name": "Class section",
+        "midterm_score": "Midterm score",
+        "final_score": "Final score",
+        "graded_at": "Graded at",
+        "enrollment": "Enrollment",
+    }
+    form_args = {
+        "enrollment": {
+            "label": "Enrollment",
+            "description": "Student code - student name | course | class section | semester",
+        },
+        "midterm_score": {"label": "Midterm score"},
+        "final_score": {"label": "Final score"},
+        "graded_at": {"label": "Graded at"},
+    }
+
+    def _get_enrollment(self, model):
+        return model.enrollment if model and model.enrollment else None
+
+    def _get_section(self, model):
+        enrollment = self._get_enrollment(model)
+        return enrollment.class_section if enrollment and enrollment.class_section else None
+
+    def _get_course(self, model):
+        section = self._get_section(model)
+        return section.course if section and section.course else None
+
+    def _get_student(self, model):
+        enrollment = self._get_enrollment(model)
+        return enrollment.student if enrollment and enrollment.student else None
+
+    def _student_name_formatter(self, context, model, name):
+        student = self._get_student(model)
+        return student.name if student else "-"
+
+    def _student_code_formatter(self, context, model, name):
+        enrollment = self._get_enrollment(model)
+        return enrollment.student_code if enrollment else "-"
+
+    def _course_name_formatter(self, context, model, name):
+        course = self._get_course(model)
+        return course.name if course else "-"
+
+    def _class_section_name_formatter(self, context, model, name):
+        section = self._get_section(model)
+        return section.name if section and section.name else "-"
+
+    def _graded_at_formatter(self, context, model, name):
+        return model.graded_at.strftime("%Y-%m-%d %H:%M:%S") if model.graded_at else "-"
+
+    def get_query(self):
+        return (
+            super()
+            .get_query()
+            .join(Enrollment, Grade.enrollment_id == Enrollment.id)
+            .join(ClassSection, Enrollment.class_section_id == ClassSection.id)
+            .join(Course, ClassSection.course_id == Course.id)
+            .join(Student, Enrollment.student_code == Student.student_code)
+        )
+
+    def get_count_query(self):
+        return (
+            super()
+            .get_count_query()
+            .join(Enrollment, Grade.enrollment_id == Enrollment.id)
+            .join(ClassSection, Enrollment.class_section_id == ClassSection.id)
+            .join(Course, ClassSection.course_id == Course.id)
+            .join(Student, Enrollment.student_code == Student.student_code)
+        )
+
+    def create_form(self, obj=None):
+        form = super().create_form(obj)
+        if hasattr(form, "graded_at") and not form.graded_at.data:
+            form.graded_at.data = datetime.now()
+        return form
+
+    def edit_form(self, obj=None):
+        form = super().edit_form(obj)
+        if hasattr(form, "graded_at") and not form.graded_at.data:
+            form.graded_at.data = datetime.now()
+        return form
+
+    def on_model_change(self, form, model, is_created):
+        if not model.graded_at:
+            model.graded_at = datetime.now()
+        return super().on_model_change(form, model, is_created)
+
+    column_formatters = {
+        "student_name": _student_name_formatter,
+        "student_code": _student_code_formatter,
+        "course_name": _course_name_formatter,
+        "class_section_name": _class_section_name_formatter,
+        "graded_at": _graded_at_formatter,
+    }
+
 admin.add_view(CourseView(Course, db.session))
 admin.add_view(ClassSectionView(ClassSection, db.session))
 admin.add_view(ScheduleView(Schedule, db.session))
+admin.add_view(GradeView(Grade, db.session))
 admin.add_view(RoomView(Room, db.session))
 admin.add_view(TeacherView(Teacher, db.session))
 admin.add_view(TeacherCourseView(TeacherCourse, db.session))

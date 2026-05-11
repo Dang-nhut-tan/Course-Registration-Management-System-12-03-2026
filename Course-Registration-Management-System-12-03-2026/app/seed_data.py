@@ -1,8 +1,10 @@
 import hashlib
 from datetime import datetime
 
+from sqlalchemy import text
+
 from app import app, db
-from app.model import Campus,ClassSection,ClassSectionType,Course,CourseMajor,CoursePrerequisite,Enrollment,EnrollmentStatus,Faculty,Major,Room,Schedule,Student,StudentClass,Teacher,TeacherCourse,TrainingProgram,TrainingProgramCourse,User,UserRole
+from app.model import Campus,ClassSection,ClassSectionType,Course,CourseMajor,CoursePrerequisite,Enrollment,EnrollmentStatus,Faculty,Grade,Major,Room,Schedule,Student,StudentClass,Teacher,TeacherCourse,TrainingProgram,TrainingProgramCourse,User,UserRole
 
 
 sample_data = {
@@ -32,7 +34,7 @@ sample_data = {
         {"id": 3, "name": "Chương trình đào tạo Marketing khóa 2022", "major_id": 4, "school_year": "2022", "max_credits_per_semester": 25},
     ],
     "students": [
-        {"student_code": "2354050113", "name": "Nguyễn Văn A", "birth_year": 2003, "class_id": 1},
+        {"student_code": "2354050113", "name": "Đặng Nhựt Tân", "birth_year": 2003, "class_id": 1},
         {"student_code": "2354050116", "name": "Phạm Văn D", "birth_year": 2003, "class_id": 4},
         {"student_code": "2354050117", "name": "Hoàng Văn E", "birth_year": 2003, "class_id": 5},
         {"student_code": "2354050118", "name": "Hoàng Văn G", "birth_year": 2003, "class_id": 6},
@@ -538,6 +540,26 @@ sample_data = {
         {"id": 57, "name": "DH22MK01", "student_class_id": 3, "course_id": 50, "teacher_id": 4, "room_id": 6, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
         {"id": 58, "name": "DH23CS02", "student_class_id": 6, "course_id": 11, "teacher_id": 1, "room_id": 7, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
         {"id": 59, "name": "DH23IM01", "student_class_id": 1, "course_id": 1, "teacher_id": 1, "room_id": 1, "semester": "2025-2", "max_students": 45, "start_date": "2025-09-01", "end_date": "2025-12-31", "registration_start_date": "2025-08-01", "registration_deadline": "2025-09-15"},
+        {"id": 100, "name": "DH23IM01", "student_class_id": 1, "course_id": 90, "teacher_id": 1, "room_id": 2, "semester": "2025-2", "max_students": 45, "start_date": "2025-09-01", "end_date": "2025-12-31", "registration_start_date": "2025-08-01", "registration_deadline": "2025-09-15"},
+        {"id": 101, "name": "DH23IM01", "student_class_id": 1, "course_id": 91, "teacher_id": 2, "room_id": 3, "semester": "2025-2", "max_students": 45, "start_date": "2025-09-01", "end_date": "2025-12-31", "registration_start_date": "2025-08-01", "registration_deadline": "2025-09-15"},
+        {"id": 102, "name": "DH23IM01", "student_class_id": 1, "course_id": 92, "teacher_id": 3, "room_id": 6, "semester": "2025-2", "max_students": 45, "start_date": "2025-09-01", "end_date": "2025-12-31", "registration_start_date": "2025-08-01", "registration_deadline": "2025-09-15"},
+        {"id": 103, "name": "DH23IM01", "student_class_id": 1, "course_id": 93, "teacher_id": 6, "room_id": 7, "semester": "2025-2", "max_students": 45, "start_date": "2025-09-01", "end_date": "2025-12-31", "registration_start_date": "2025-08-01", "registration_deadline": "2025-09-15"},
+        {"id": 104, "name": "DH23IM01", "student_class_id": 1, "course_id": 94, "teacher_id": 7, "room_id": 8, "semester": "2025-2", "max_students": 45, "start_date": "2025-09-01", "end_date": "2025-12-31", "registration_start_date": "2025-08-01", "registration_deadline": "2025-09-15"},
+        {"id": 105, "name": "DH23IM01", "student_class_id": 1, "course_id": 95, "teacher_id": 8, "room_id": 9, "semester": "2025-2", "max_students": 45, "start_date": "2025-09-01", "end_date": "2025-12-31", "registration_start_date": "2025-08-01", "registration_deadline": "2025-09-15"},
+        {"id": 106, "name": "DH23IM01", "student_class_id": 1, "course_id": 30, "teacher_id": 1, "room_id": 1, "semester": "2025-1", "max_students": 45, "start_date": "2025-02-01", "end_date": "2025-05-31", "registration_start_date": "2025-01-01", "registration_deadline": "2025-02-15"},
+        {"id": 107, "name": "DH23IM01", "student_class_id": 1, "course_id": 31, "teacher_id": 2, "room_id": 2, "semester": "2025-1", "max_students": 45, "start_date": "2025-02-01", "end_date": "2025-05-31", "registration_start_date": "2025-01-01", "registration_deadline": "2025-02-15"},
+        {"id": 108, "name": "DH23IM01", "student_class_id": 1, "course_id": 32, "teacher_id": 3, "room_id": 3, "semester": "2025-1", "max_students": 45, "start_date": "2025-02-01", "end_date": "2025-05-31", "registration_start_date": "2025-01-01", "registration_deadline": "2025-02-15"},
+        {"id": 109, "name": "DH23IM01", "student_class_id": 1, "course_id": 33, "teacher_id": 4, "room_id": 6, "semester": "2025-1", "max_students": 45, "start_date": "2025-02-01", "end_date": "2025-05-31", "registration_start_date": "2025-01-01", "registration_deadline": "2025-02-15"},
+        {"id": 110, "name": "DH23IM01", "student_class_id": 1, "course_id": 34, "teacher_id": 5, "room_id": 7, "semester": "2025-1", "max_students": 45, "start_date": "2025-02-01", "end_date": "2025-05-31", "registration_start_date": "2025-01-01", "registration_deadline": "2025-02-15"},
+        {"id": 111, "name": "DH23IM01", "student_class_id": 1, "course_id": 35, "teacher_id": 6, "room_id": 8, "semester": "2025-1", "max_students": 45, "start_date": "2025-02-01", "end_date": "2025-05-31", "registration_start_date": "2025-01-01", "registration_deadline": "2025-02-15"},
+        {"id": 112, "name": "DH23IM01", "student_class_id": 1, "course_id": 18, "teacher_id": 1, "room_id": 1, "semester": "2024-2", "max_students": 45, "start_date": "2024-09-01", "end_date": "2024-12-31", "registration_start_date": "2024-08-01", "registration_deadline": "2024-09-15"},
+        {"id": 113, "name": "DH23IM01", "student_class_id": 1, "course_id": 19, "teacher_id": 2, "room_id": 2, "semester": "2024-2", "max_students": 45, "start_date": "2024-09-01", "end_date": "2024-12-31", "registration_start_date": "2024-08-01", "registration_deadline": "2024-09-15"},
+        {"id": 114, "name": "DH23IM01", "student_class_id": 1, "course_id": 20, "teacher_id": 3, "room_id": 3, "semester": "2024-2", "max_students": 45, "start_date": "2024-09-01", "end_date": "2024-12-31", "registration_start_date": "2024-08-01", "registration_deadline": "2024-09-15"},
+        {"id": 115, "name": "DH23IM01", "student_class_id": 1, "course_id": 21, "teacher_id": 4, "room_id": 6, "semester": "2024-2", "max_students": 45, "start_date": "2024-09-01", "end_date": "2024-12-31", "registration_start_date": "2024-08-01", "registration_deadline": "2024-09-15"},
+        {"id": 116, "name": "DH23IM01", "student_class_id": 1, "course_id": 10, "teacher_id": 5, "room_id": 1, "semester": "2024-1", "max_students": 45, "start_date": "2024-02-01", "end_date": "2024-05-31", "registration_start_date": "2024-01-01", "registration_deadline": "2024-02-15"},
+        {"id": 117, "name": "DH23IM01", "student_class_id": 1, "course_id": 38, "teacher_id": 6, "room_id": 2, "semester": "2024-1", "max_students": 45, "start_date": "2024-02-01", "end_date": "2024-05-31", "registration_start_date": "2024-01-01", "registration_deadline": "2024-02-15"},
+        {"id": 118, "name": "DH23IM01", "student_class_id": 1, "course_id": 41, "teacher_id": 7, "room_id": 3, "semester": "2024-1", "max_students": 45, "start_date": "2024-02-01", "end_date": "2024-05-31", "registration_start_date": "2024-01-01", "registration_deadline": "2024-02-15"},
+        {"id": 119, "name": "DH23IM01", "student_class_id": 1, "course_id": 44, "teacher_id": 8, "room_id": 6, "semester": "2024-1", "max_students": 45, "start_date": "2024-02-01", "end_date": "2024-05-31", "registration_start_date": "2024-01-01", "registration_deadline": "2024-02-15"},
         {"id": 97, "name": "DH23IM01", "student_class_id": 1, "course_id": 11, "teacher_id": 9, "room_id": 13, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15", "section_type": "practice"},
         {"id": 96, "name": "DH23IM01", "student_class_id": 1, "course_id": 11, "teacher_id": 9, "room_id": 10, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15", "linked_section_id": 97},
         {"id": 90, "name": "DH23IM01", "student_class_id": 1, "course_id": 90, "teacher_id": 1, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
@@ -620,18 +642,70 @@ sample_data = {
         {"id": 9, "student_code": "2354050113", "class_section_id": 59, "status": "registered", "registered_at": "2025-08-20T08:00:00"},
         {"id": 10, "student_code": "2354050113", "class_section_id": 96, "status": "registered", "registered_at": "2026-05-10T12:10:00"},
         {"id": 11, "student_code": "2354050113", "class_section_id": 97, "status": "registered", "registered_at": "2026-05-10T12:10:00"},
+        {"id": 12, "student_code": "2354050113", "class_section_id": 100, "status": "registered", "registered_at": "2025-08-20T08:10:00"},
+        {"id": 13, "student_code": "2354050113", "class_section_id": 101, "status": "registered", "registered_at": "2025-08-20T08:20:00"},
+        {"id": 14, "student_code": "2354050113", "class_section_id": 102, "status": "registered", "registered_at": "2025-08-20T08:30:00"},
+        {"id": 15, "student_code": "2354050113", "class_section_id": 103, "status": "registered", "registered_at": "2025-08-20T08:40:00"},
+        {"id": 16, "student_code": "2354050113", "class_section_id": 104, "status": "registered", "registered_at": "2025-08-20T08:50:00"},
+        {"id": 17, "student_code": "2354050113", "class_section_id": 105, "status": "registered", "registered_at": "2025-08-20T09:00:00"},
+        {"id": 18, "student_code": "2354050113", "class_section_id": 106, "status": "registered", "registered_at": "2025-01-20T08:00:00"},
+        {"id": 19, "student_code": "2354050113", "class_section_id": 107, "status": "registered", "registered_at": "2025-01-20T08:10:00"},
+        {"id": 20, "student_code": "2354050113", "class_section_id": 108, "status": "registered", "registered_at": "2025-01-20T08:20:00"},
+        {"id": 21, "student_code": "2354050113", "class_section_id": 109, "status": "registered", "registered_at": "2025-01-20T08:30:00"},
+        {"id": 22, "student_code": "2354050113", "class_section_id": 110, "status": "registered", "registered_at": "2025-01-20T08:40:00"},
+        {"id": 23, "student_code": "2354050113", "class_section_id": 111, "status": "registered", "registered_at": "2025-01-20T08:50:00"},
+        {"id": 24, "student_code": "2354050113", "class_section_id": 112, "status": "registered", "registered_at": "2024-08-20T08:00:00"},
+        {"id": 25, "student_code": "2354050113", "class_section_id": 113, "status": "registered", "registered_at": "2024-08-20T08:10:00"},
+        {"id": 26, "student_code": "2354050113", "class_section_id": 114, "status": "registered", "registered_at": "2024-08-20T08:20:00"},
+        {"id": 27, "student_code": "2354050113", "class_section_id": 115, "status": "registered", "registered_at": "2024-08-20T08:30:00"},
+        {"id": 28, "student_code": "2354050113", "class_section_id": 116, "status": "registered", "registered_at": "2024-01-20T08:00:00"},
+        {"id": 29, "student_code": "2354050113", "class_section_id": 117, "status": "registered", "registered_at": "2024-01-20T08:10:00"},
+        {"id": 30, "student_code": "2354050113", "class_section_id": 118, "status": "registered", "registered_at": "2024-01-20T08:20:00"},
+        {"id": 31, "student_code": "2354050113", "class_section_id": 119, "status": "registered", "registered_at": "2024-01-20T08:30:00"},
         {"id": 6, "student_code": "2354050116", "class_section_id": 2, "status": "registered"},
         {"id": 7, "student_code": "2354050117", "class_section_id": 2, "status": "registered"},
         {"id": 8, "student_code": "2354050118", "class_section_id": 6, "status": "registered"},
         {"id": 4, "student_code": "2354050114", "class_section_id": 7, "status": "registered"},
         {"id": 5, "student_code": "2354050115", "class_section_id": 9, "status": "registered"},
     ],
+    "grades": [
+        {"id": 1, "enrollment_id": 9, "midterm_score": 9.4, "final_score": 9.2, "graded_at": "2025-12-25T08:30:00"},
+        {"id": 2, "enrollment_id": 12, "midterm_score": 9.0, "final_score": 9.4, "graded_at": "2025-12-25T08:40:00"},
+        {"id": 3, "enrollment_id": 13, "midterm_score": 8.8, "final_score": 9.0, "graded_at": "2025-12-25T08:50:00"},
+        {"id": 4, "enrollment_id": 14, "midterm_score": 8.6, "final_score": 8.8, "graded_at": "2025-12-25T09:00:00"},
+        {"id": 5, "enrollment_id": 15, "midterm_score": 9.5, "final_score": 9.6, "graded_at": "2025-12-25T09:10:00"},
+        {"id": 6, "enrollment_id": 16, "midterm_score": 8.5, "final_score": 8.7, "graded_at": "2025-12-25T09:20:00"},
+        {"id": 7, "enrollment_id": 17, "midterm_score": 9.1, "final_score": 9.0, "graded_at": "2025-12-25T09:30:00"},
+        {"id": 8, "enrollment_id": 18, "midterm_score": 8.9, "final_score": 9.1, "graded_at": "2025-05-25T08:00:00"},
+        {"id": 9, "enrollment_id": 19, "midterm_score": 9.2, "final_score": 9.3, "graded_at": "2025-05-25T08:10:00"},
+        {"id": 10, "enrollment_id": 20, "midterm_score": 8.7, "final_score": 8.9, "graded_at": "2025-05-25T08:20:00"},
+        {"id": 11, "enrollment_id": 21, "midterm_score": 9.0, "final_score": 9.0, "graded_at": "2025-05-25T08:30:00"},
+        {"id": 12, "enrollment_id": 22, "midterm_score": 8.6, "final_score": 8.8, "graded_at": "2025-05-25T08:40:00"},
+        {"id": 13, "enrollment_id": 23, "midterm_score": 9.4, "final_score": 9.5, "graded_at": "2025-05-25T08:50:00"},
+        {"id": 14, "enrollment_id": 24, "midterm_score": 8.7, "final_score": 8.9, "graded_at": "2024-12-25T08:00:00"},
+        {"id": 15, "enrollment_id": 25, "midterm_score": 9.0, "final_score": 9.2, "graded_at": "2024-12-25T08:10:00"},
+        {"id": 16, "enrollment_id": 26, "midterm_score": 8.6, "final_score": 8.8, "graded_at": "2024-12-25T08:20:00"},
+        {"id": 17, "enrollment_id": 27, "midterm_score": 9.3, "final_score": 9.4, "graded_at": "2024-12-25T08:30:00"},
+        {"id": 18, "enrollment_id": 28, "midterm_score": 9.2, "final_score": 9.3, "graded_at": "2024-05-25T08:00:00"},
+        {"id": 19, "enrollment_id": 29, "midterm_score": 8.6, "final_score": 8.8, "graded_at": "2024-05-25T08:10:00"},
+        {"id": 20, "enrollment_id": 30, "midterm_score": 9.1, "final_score": 9.2, "graded_at": "2024-05-25T08:20:00"},
+        {"id": 21, "enrollment_id": 31, "midterm_score": 8.5, "final_score": 8.7, "graded_at": "2024-05-25T08:30:00"},
+    ],
 }
 
 
 def seed_data():
+    if db.engine.dialect.name == "mysql":
+        db.session.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
+        db.session.execute(text("DROP TABLE IF EXISTS student_class_sections"))
+        db.session.commit()
+
     db.drop_all()
     db.create_all()
+
+    if db.engine.dialect.name == "mysql":
+        db.session.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
+        db.session.commit()
 
     for faculty in sample_data["faculties"]:
         db.session.add(Faculty(id=faculty["id"], name=faculty["name"]))
@@ -811,6 +885,20 @@ def seed_data():
                 status=EnrollmentStatus(enrollment["status"]),
                 registered_at=datetime.fromisoformat(enrollment["registered_at"])
                 if enrollment.get("registered_at")
+                else None,
+            )
+        )
+    db.session.commit()
+
+    for grade in sample_data.get("grades", []):
+        db.session.add(
+            Grade(
+                id=grade["id"],
+                enrollment_id=grade["enrollment_id"],
+                midterm_score=grade["midterm_score"],
+                final_score=grade["final_score"],
+                graded_at=datetime.fromisoformat(grade["graded_at"])
+                if grade.get("graded_at")
                 else None,
             )
         )

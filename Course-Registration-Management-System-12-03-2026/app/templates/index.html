@@ -10,7 +10,7 @@
     href="{{ url_for('static', filename='css/student-pages.css') }}"
   />
 </head>
-<body class="bg-gray-100 student-page">
+<body class="bg-gray-100 student-page registration-page">
   <div class="flex items-center justify-between p-4">
     <div class="flex items-center gap-3">
       <span class="text-sm font-semibold">{{ student_code }} - {{ student_name }}</span>
@@ -20,13 +20,14 @@
       <select class="student-nav__select" onchange="window.location.href=this.value">
         <option value="{{ url_for('index') }}" selected>Đăng ký môn học</option>
         <option value="{{ url_for('timetable') }}">Xem thời khóa biểu</option>
+        <option value="{{ url_for('study_result') }}">Kết quả học tập</option>
         <option value="{{ url_for('logout') }}">Đăng xuất</option>
       </select>
     </label>
   </div>
 
 <div class="p-6">
-  <h1 class="mb-4 text-2xl font-bold">Đăng ký môn học</h1>
+  <h3 class="mb-4 text-2xl font-bold">Đăng ký môn học</h3>
 
   {% if message %}
   <div class="mb-4 rounded-lg px-4 py-3 {% if message_type == 'success' %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
@@ -34,7 +35,7 @@
   </div>
   {% endif %}
 
-  <div class="mb-4 rounded-lg bg-white p-4 shadow">
+  <div class="registration-filter mb-4 rounded-lg bg-white p-4 shadow">
     <form method="GET" action="/index" class="grid grid-cols-[1fr_1fr_1fr_auto] gap-4">
       <select name="training_program_semester" class="w-full rounded border p-2">
         <option value="">-- Chọn kỳ CTĐT --</option>
@@ -101,8 +102,8 @@
     {% endif %}
   </p>
 
-  <div class="overflow-hidden rounded-lg bg-white shadow">
-    <table class="w-full text-center text-sm">
+  <div class="registration-table-wrap overflow-hidden rounded-lg bg-white shadow">
+    <table class="registration-table w-full text-center text-sm">
       <thead class="bg-gray-200">
         <tr>
           <th class="p-3">Mã MH</th>
@@ -196,9 +197,9 @@
   {% endif %}
 </div>
 
-<div class="mt-6 rounded-lg bg-white p-6 shadow">
-  <h2 class="mb-4 text-lg font-bold">Danh sách môn học đã đăng ký: <strong>{{ registered_courses|length }}</strong> môn</h2>
-  <table class="w-full text-center text-sm">
+<div class="registration-panel mt-6 rounded-lg bg-white p-6 shadow">
+  <h3 class="mb-4 text-lg font-bold">Danh sách môn học đã đăng ký: <strong>{{ registered_courses|length }}</strong> môn</h3>
+  <table class="registration-table w-full text-center text-sm">
     <thead class="bg-gray-200">
       <tr>
         <th class="p-3">Mã MH</th>

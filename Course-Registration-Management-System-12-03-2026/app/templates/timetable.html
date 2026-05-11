@@ -27,6 +27,7 @@
               <select class="student-nav__select" onchange="window.location.href=this.value">
                 <option value="{{ url_for('index') }}">Đăng ký môn học</option>
                 <option value="{{ url_for('timetable') }}" selected>Xem thời khóa biểu</option>
+                <option value="{{ url_for('study_result') }}">Kết quả học tập</option>
                 <option value="{{ url_for('logout') }}">Đăng xuất</option>
               </select>
             </label>
