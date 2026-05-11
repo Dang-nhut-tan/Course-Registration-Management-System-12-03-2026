@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from app.test.test_base import test_app, test_session
 from app.admin import ClassSectionView
-from datetime import datetime, time
+from datetime import datetime, timedelta, time
 
 from app.model import Campus, ClassSection, ClassSectionType, Course, Room, Schedule, StudentClass, Teacher, User, UserRole
 
@@ -44,6 +44,65 @@ def test_create_section_others(test_app, test_admin, mock_form):
 
             assert actual_result is False
 
+
+def test_section_max_students_exceeded(test_app, test_session):
+    with test_app.app_context(), test_app.test_request_context():
+        view = ClassSectionView(ClassSection, test_session)
+        form = MagicMock()
+
+        form.course.data = Course(id=1, faculty_id=1)
+        form.max_students.data = 51
+        form.semester.data = "2026-1"
+        form.schedule_day.data = "2"
+        form.section_type.data = ClassSectionType.THEORY
+        form.schedule_start_time.data = "07:30"
+        form.schedule_end_time.data = "09:30"
+        form.start_date.data = datetime.now()
+        form.end_date.data = datetime.now() + timedelta(days=1)
+        form.teacher.data = None
+        form.room.data = Room(id=1, room_type="theory")
+
+        form._fields = {
+            'course': form.course,
+            'max_students': form.max_students,
+            'semester': form.semester,
+            'schedule_day': form.schedule_day,
+            'section_type': form.section_type,
+            'schedule_start_time': form.schedule_start_time,
+            'schedule_end_time': form.schedule_end_time
+        }
+        actual_result = view.validate_class_section_form(form)
+
+        assert actual_result is False
+
+
+def test_section_roomtype_mismatch(test_app, test_session):
+    with test_app.app_context(), test_app.test_request_context():
+        view = ClassSectionView(ClassSection, test_session)
+
+        form = MagicMock()
+
+        form.course.data = Course(id=1, faculty_id=1)
+        form.section_type.data = ClassSectionType.THEORY
+        form.room.data = Room(id=2, room_type="practice")
+        form.semester.data = "2026-1"
+        form.schedule_day.data = "2"
+        form.max_students.data = 30
+        form.schedule_start_time.data = "07:30"
+        form.schedule_end_time.data = "09:30"
+
+        form._fields = {
+            'course': form.course,
+            'section_type': form.section_type,
+            'room': form.room,
+            'max_students': form.max_students,
+            'semester': form.semester,
+            'schedule_day': form.schedule_day,
+            'schedule_start_time': form.schedule_start_time,
+            'schedule_end_time': form.schedule_end_time
+        }
+
+        assert view.validate_class_section_form(form) is False
 
 def test_auto_link_practice_section(test_app, test_session, test_admin):
     with test_app.app_context():
@@ -194,8 +253,8 @@ def make_class_section_form(**overrides):
         for key, value in data.items()
     }
     return form
-
-
+#
+#
 def test_validate_class_section_rejects_invalid_semester(test_app, test_admin):
     with test_app.test_request_context():
         form = make_class_section_form(semester="uedfhuiwqfe")

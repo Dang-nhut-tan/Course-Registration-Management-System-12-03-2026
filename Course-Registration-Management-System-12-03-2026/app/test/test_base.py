@@ -2,7 +2,7 @@ import pytest
 from flask import Flask
 
 from app import db
-
+from app.utils import login_manager
 
 def create_app():
     app = Flask(__name__)
@@ -12,6 +12,7 @@ def create_app():
     app.config["SECRET_KEY"]= "4365ur76ifkyfvfytidyfyj"
 
     db.init_app(app)
+    login_manager.init_app(app)
 
     from app import index as index_routes
 

@@ -48,7 +48,19 @@ def test_room_conflict(test_app, test_session, sample_schedule):
         )
         assert is_conflict is True
 
-def test_ended_section_releases_room_and_teacher(test_app, test_session):
+
+def test_teacher_conflict(test_app, test_session, sample_schedule):
+    with test_app.app_context():
+        is_conflict = check_teacher_conflict(
+            day=2,
+            start_time=time(7, 0),
+            end_time=time(9, 30),
+            teacher_id=1
+        )
+
+        assert is_conflict is True
+
+def test_ended_section_releases_room_teacher(test_app, test_session):
     with test_app.app_context():
         room = Room(id=2, name="A102", campus_id=1)
         teacher = Teacher(id=2, name="Teacher B")

@@ -189,7 +189,6 @@ def index():
         message_type=request.args.get("msg_type", "")
     )
 
-#===========================================================
 @app.route("/timetable")
 def timetable():
     student_code = session.get("student_code")
