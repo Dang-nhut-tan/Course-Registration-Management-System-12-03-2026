@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import datetime
 from enum import Enum as PyEnum
 
 if __package__ in (None, ""):
@@ -170,6 +171,13 @@ class TeacherCourse(db.Model):
     teacher = relationship("Teacher", backref="teacher_courses")
     course = relationship("Course", backref="teacher_courses")
 
+    def __str__(self):
+        if self.course and self.teacher:
+            return f"{self.course.name} - {self.teacher.name}"
+        if self.course:
+            return self.course.name
+        return f"TeacherCourse {self.teacher_id}, {self.course_id}"
+
 
 class Student(db.Model):
     __tablename__ = "students"
@@ -211,15 +219,6 @@ class ClassSection(BaseModel):
     enrollments = relationship("Enrollment", backref="class_section", lazy=True)
     linked_section = relationship("ClassSection", remote_side="ClassSection.id", uselist=False)
 
-
-class StudentClassSection(db.Model):
-    __tablename__ = "student_class_sections"
-
-    class_section_id = Column(Integer, ForeignKey("class_sections.id"), primary_key=True)
-    student_code = Column(String(50), ForeignKey("students.student_code"), primary_key=True)
-    score_midterm = Column(Float)
-
-
 class Schedule(BaseModel):
     __tablename__ = "schedules"
 
@@ -238,6 +237,32 @@ class Enrollment(BaseModel):
     registered_at = Column(DateTime, nullable=True)
 
     student = relationship("Student", backref="enrollments")
+
+    def __str__(self):
+        student_label = self.student_code or f"Enrollment {self.id}"
+        if self.student and self.student.name:
+            student_label = f"{self.student_code} - {self.student.name}"
+
+        section = self.class_section
+        if not section:
+            return student_label
+
+        course = section.course
+        course_label = course.name if course else f"Course {section.course_id}"
+        section_label = section.name or f"Class section {section.id}"
+        semester_label = section.semester or "No semester"
+        return f"{student_label} | {course_label} | {section_label} | {semester_label}"
+
+
+class Grade(BaseModel):
+    __tablename__ = "grades"
+
+    enrollment_id = Column(Integer, ForeignKey("enrollments.id"), unique=True, nullable=False)
+    midterm_score = Column(Float, nullable=True)
+    final_score = Column(Float, nullable=True)
+    graded_at = Column(DateTime, nullable=True, default=datetime.now)
+
+    enrollment = relationship("Enrollment", backref=db.backref("grade", uselist=False))
 
 def get_sample_data():
     from app.seed_data import sample_data

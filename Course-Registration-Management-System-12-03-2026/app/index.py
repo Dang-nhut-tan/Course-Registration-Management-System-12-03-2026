@@ -139,11 +139,6 @@ def index():
     total_pages = max((total_sections + per_page - 1) // per_page, 1)
     page = min(max(page, 1), total_pages)
     sections = all_sections[(page - 1) * per_page:page * per_page]
-    section_block_reasons = {
-        section.id: utils.get_section_registration_block_reason(student_code, section)
-        for section in sections
-    }
-
     count_section_ids = []
     for section in sections:
         count_section_ids.append(section.id)
@@ -165,7 +160,6 @@ def index():
         total_sections=total_sections,
         page=page,
         total_pages=total_pages,
-        section_block_reasons=section_block_reasons,
         courses=filters["courses"],
         faculties=filters["faculties"],
         selected_course_query=course_query,
@@ -213,6 +207,22 @@ def timetable():
         can_next_week=context["can_next_week"],
         term_start=context["term_start"],
         term_end=context["term_end"],
+    )
+
+@app.route("/study-result")
+@app.route("/grades")
+def study_result():
+    student_code = session.get("student_code")
+    if not student_code:
+        return redirect(url_for("login"))
+
+    semester_results = utils.build_study_result_context(student_code)
+
+    return render_template(
+        "study-result.html",
+        student_code=student_code,
+        student_name=session.get("student_name"),
+        semester_results=semester_results,
     )
 
 if __name__ == "__main__":

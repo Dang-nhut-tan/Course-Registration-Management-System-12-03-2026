@@ -10,7 +10,7 @@
     href="{{ url_for('static', filename='css/student-pages.css') }}"
   />
 </head>
-<body class="bg-gray-100 student-page">
+<body class="bg-gray-100 student-page registration-page">
   <div class="flex items-center justify-between p-4">
     <div class="flex items-center gap-3">
       <span class="text-sm font-semibold">{{ student_code }} - {{ student_name }}</span>
@@ -20,6 +20,7 @@
       <select class="student-nav__select" onchange="window.location.href=this.value">
         <option value="{{ url_for('index') }}" selected>Đăng ký môn học</option>
         <option value="{{ url_for('timetable') }}">Xem thời khóa biểu</option>
+        <option value="{{ url_for('study_result') }}">Kết quả học tập</option>
         <option value="{{ url_for('logout') }}">Đăng xuất</option>
       </select>
     </label>
@@ -34,7 +35,7 @@
   </div>
   {% endif %}
 
-  <div class="mb-4 rounded-lg bg-white p-4 shadow">
+  <div class="registration-filter mb-4 rounded-lg bg-white p-4 shadow">
     <form method="GET" action="/index" class="grid grid-cols-[1fr_1fr_1fr_auto] gap-4">
       <select name="training_program_semester" class="w-full rounded border p-2">
         <option value="">-- Chọn kỳ CTĐT --</option>
@@ -101,8 +102,8 @@
     {% endif %}
   </p>
 
-  <div class="overflow-hidden rounded-lg bg-white shadow">
-    <table class="w-full text-center text-sm">
+  <div class="registration-table-wrap overflow-hidden rounded-lg bg-white shadow">
+    <table class="registration-table w-full text-center text-sm">
       <thead class="bg-gray-200">
         <tr>
           <th class="p-3">Mã MH</th>
@@ -160,18 +161,8 @@
             {% endif %}
           </td>
           <td>
-            {% if s.id in registered_section_ids %}
-            <button class="cursor-not-allowed rounded bg-gray-400 px-3 py-1 text-white" disabled>Đã đăng ký</button>
-            {% elif selected_training_program_semester and current_training_program_semester and selected_training_program_semester != current_training_program_semester %}
+            {% if selected_training_program_semester and current_training_program_semester and selected_training_program_semester != current_training_program_semester %}
             <button class="cursor-not-allowed rounded bg-gray-400 px-3 py-1 text-white" disabled>Chỉ xem</button>
-            {% elif section_block_reasons.get(s.id) %}
-            <button
-              class="cursor-not-allowed rounded bg-gray-400 px-3 py-1 text-white"
-              title="{{ section_block_reasons.get(s.id) }}"
-              disabled
-            >Không thể đăng ký</button>
-            {% elif section_capacity - registered_count == 0 or (practice and practice_capacity - practice_registered_count == 0) %}
-            <button class="rounded bg-gray-400 px-3 py-1 text-white" disabled>Hết chỗ</button>
             {% else %}
             <form method="POST" action="{{ url_for('register_course') }}">
               <input type="hidden" name="class_section_id" value="{{ s.id }}">
@@ -206,9 +197,9 @@
   {% endif %}
 </div>
 
-<div class="mt-6 rounded-lg bg-white p-6 shadow">
+<div class="registration-panel mt-6 rounded-lg bg-white p-6 shadow">
   <h3 class="mb-4 text-lg font-bold">Danh sách môn học đã đăng ký: <strong>{{ registered_courses|length }}</strong> môn</h3>
-  <table class="w-full text-center text-sm">
+  <table class="registration-table w-full text-center text-sm">
     <thead class="bg-gray-200">
       <tr>
         <th class="p-3">Mã MH</th>

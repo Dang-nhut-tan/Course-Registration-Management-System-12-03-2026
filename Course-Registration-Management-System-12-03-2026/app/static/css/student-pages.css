@@ -158,6 +158,104 @@
     display: block;
 }
 
+<<<<<<< HEAD
+=======
+.registration-page > .p-6,
+.registration-panel {
+    margin: 24px 30px;
+    border: 1px solid #3b82f6;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+
+.registration-page > .p-6 {
+    padding: 24px !important;
+}
+
+.registration-page > .p-6 > h1,
+.registration-panel > h2 {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #3b82f6;
+    padding-bottom: 16px;
+    color: #111827;
+    font-size: 24px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.registration-filter {
+    border: 1px solid #dbeafe;
+    box-shadow: none !important;
+}
+
+.registration-filter select,
+.registration-filter input {
+    border-color: #bfdbfe !important;
+}
+
+.registration-table-wrap {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+.registration-table thead {
+    background: #ffffff !important;
+}
+
+.registration-table th,
+.registration-table td {
+    border-bottom: 1px solid #0b78c6;
+    padding: 12px 10px;
+}
+
+.registration-table th {
+    color: #111827;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.registration-table tbody tr {
+    border-top: 0 !important;
+}
+
+.study-result-table th,
+.study-result-table td {
+    border-bottom: 1px solid #0b78c6;
+    padding: 12px 10px;
+}
+
+.study-result-table th {
+    color: #111827;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.study-semester-title {
+    background: #d1d5db;
+    border-bottom: 1px solid #0b78c6;
+    color: #111827;
+    font-weight: 700;
+    padding: 14px 12px;
+}
+
+.study-summary {
+    background: #c7e3f1;
+    border-bottom: 1px solid #0b78c6;
+    color: #075985;
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    line-height: 1.7;
+    padding: 10px 16px;
+    text-align: left;
+}
+
+.study-summary strong {
+    margin-left: 12px;
+}
+
+>>>>>>> b99f523 (Update UI and model)
 @media (max-width: 640px) {
     .student-nav {
         align-items: stretch;
@@ -168,4 +266,11 @@
     .student-nav__select {
         width: 100%;
     }
+<<<<<<< HEAD
+=======
+
+    .study-summary {
+        grid-template-columns: 1fr;
+    }
+>>>>>>> b99f523 (Update UI and model)
 }
