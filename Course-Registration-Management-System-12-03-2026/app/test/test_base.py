@@ -3,6 +3,10 @@ from flask import Flask
 
 from app import db
 from app.utils import login_manager
+from selenium.webdriver.chrome import webdriver
+from selenium import webdriver
+# Nếu bạn cần dùng Service (cho bản Selenium 4 mới nhất)
+from selenium.webdriver.chrome.service import Service
 
 def create_app():
     app = Flask(__name__)
@@ -39,3 +43,14 @@ def test_session(test_app):
 @pytest.fixture
 def test_client(test_app):
     return test_app.test_client()
+
+
+@pytest.fixture
+def test_client(test_app):
+    return test_app.test_client()
+
+@pytest.fixture
+def driver():
+    driver = webdriver.Chrome()
+    yield driver
+    driver.quit()
