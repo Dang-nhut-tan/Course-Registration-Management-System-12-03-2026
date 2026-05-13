@@ -43,3 +43,9 @@ class LoginPage(BasePage):
 
     def click_forgot_password(self):
         self.click(*self.FORGOT_PASSWORD_LINK)
+
+    def student_code_input_is_displayed(self):
+        return self.find(*self.STUDENT_CODE_INPUT).is_displayed()
+
+    def password_input_is_displayed(self):
+        return self.find(*self.PASSWORD_INPUT).is_displayed()
