@@ -8,7 +8,7 @@ from datetime import datetime, time
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from app import app, db
-from flask_admin import Admin, AdminIndexView, expose
+from flask_admin import Admin, AdminIndexView
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.model.filters import BaseFilter
 from app.model import Course, ClassSection, ClassSectionType, Enrollment, EnrollmentStatus, Grade, Schedule, Room, UserRole, Campus, Teacher, TeacherCourse, CoursePrerequisite, CourseMajor, Faculty, Student, StudentClass
@@ -52,7 +52,7 @@ def get_semester_choices():
 
     return choices
 
-class IndexView(AdminIndexView):
+class AdminAccessIndexView (AdminIndexView):
     def is_visible(self):
         return False
 
@@ -62,7 +62,7 @@ class IndexView(AdminIndexView):
     def inaccessible_callback(self, name, **kwargs):
         return redirect(url_for('login', next=request.url))
 
-admin = Admin(app=app, name="Course Registration Administration", index_view=IndexView())
+admin = Admin(app=app, name="Course Registration Administration", index_view=AdminAccessIndexView())
 
 class BaseView(ModelView):
     def is_accessible(self):
