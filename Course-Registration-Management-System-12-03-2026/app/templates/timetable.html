@@ -1,16 +1,10 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Thời khóa biểu cá nhân</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/student-pages.css') }}"
-    />
-</head>
-<body class="bg-gray-50 student-page min-h-screen">
+{% extends "layouts/student.html" %}
+
+{% block title %}Thời khóa biểu cá nhân{% endblock %}
+{% block body_class %}bg-gray-50 student-page min-h-screen{% endblock %}
+{% block student_header %}{% endblock %}
+
+{% block content %}
 
   <div class="max-w-7xl mx-auto p-6">
 
@@ -22,15 +16,7 @@
         </div>
 
         <div class="flex flex-col items-end gap-3">
-            <label class="student-nav" aria-label="Tiện ích sinh viên">
-              <span class="student-nav__label">Tiện ích sinh viên</span>
-              <select class="student-nav__select" onchange="window.location.href=this.value">
-                <option value="{{ url_for('index') }}">Đăng ký môn học</option>
-                <option value="{{ url_for('timetable') }}" selected>Xem thời khóa biểu</option>
-                <option value="{{ url_for('study_result') }}">Kết quả học tập</option>
-                <option value="{{ url_for('logout') }}">Đăng xuất</option>
-              </select>
-            </label>
+            {% include "partials/student_nav.html" %}
             <div class="flex items-center gap-4 bg-gray-100 p-1 rounded-lg shadow-inner">
                 {% if can_previous_week %}
                 <a href="{{ url_for('timetable', week=week-1) }}" class="px-3 py-1 hover:bg-white rounded shadow-sm transition">Tuần trước</a>
@@ -127,9 +113,4 @@
     </div>
   </div>
 
-  <footer class="text-center text-sm text-gray-500 my-4">
-    <p>2024 Phòng Đào tạo - Đại học Mở</p>
-    <p class="mt-1">Chính sách bảo mật • Điều khoản sử dụng</p>
-  </footer>
-</body>
-</html>
+{% endblock %}

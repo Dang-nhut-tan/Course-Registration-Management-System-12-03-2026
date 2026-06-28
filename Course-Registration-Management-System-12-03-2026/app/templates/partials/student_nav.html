@@ -1,0 +1,9 @@
+<label class="student-nav" aria-label="Tiện ích sinh viên">
+  <span class="student-nav__label">Tiện ích sinh viên</span>
+  <select class="student-nav__select" onchange="window.location.href=this.value">
+    <option value="{{ url_for('index') }}" {% if request.endpoint == 'index' %}selected{% endif %}>Đăng ký môn học</option>
+    <option value="{{ url_for('timetable') }}" {% if request.endpoint == 'timetable' %}selected{% endif %}>Xem thời khóa biểu</option>
+    <option value="{{ url_for('study_result') }}" {% if request.endpoint == 'study_result' %}selected{% endif %}>Kết quả học tập</option>
+    <option value="{{ url_for('logout') }}">Đăng xuất</option>
+  </select>
+</label>

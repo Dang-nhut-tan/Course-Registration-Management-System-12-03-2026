@@ -1,43 +1,8 @@
-<!doctype html>
-<html lang="vi">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Đăng nhập hệ thống</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/login.css') }}"
-    />
-  </head>
-  <body class="bg-gray-100 min-h-screen flex flex-col font-[Inter]">
-    <header class="w-full bg-white border-b">
-      <div class="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
-        <div class="flex items-center gap-3">
-          <img
-            src="{{ url_for('static', filename='images/logoOU.png') }}"
-            class="h-10 w-10 object-contain"
-            alt="logo"
-          />
-          <span class="font-semibold text-lg">Đại học Mở</span>
-        </div>
-        <div class="flex gap-4 items-center text-sm">
-          <a
-            href="https://ou.edu.vn/author/support/"
-            target="_blank"
-            class="link-help"
-          >
-            Hỗ trợ
-          </a>
-        </div>
-      </div>
-    </header>
+{% extends "layouts/auth.html" %}
 
-    <main class="flex-grow flex items-center justify-center p-4">
+{% block title %}Đăng nhập hệ thống{% endblock %}
+
+{% block content %}
       <div class="w-full max-w-md bg-white rounded-xl shadow-xl overflow-hidden">
         <div class="bg-gradient-to-r from-blue-700 via-blue-500 to-blue-400 py-10 flex justify-center">
           <svg
@@ -133,12 +98,8 @@
           </form>
         </div>
       </div>
-    </main>
+{% endblock %}
 
-    <footer class="text-center text-sm text-gray-500 mb-4">
-      <p>2024 Phòng Đào tạo - Đại học Mở</p>
-      <p class="mt-1">Chính sách bảo mật • Điều khoản sử dụng</p>
-    </footer>
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
-  </body>
-</html>
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+{% endblock %}

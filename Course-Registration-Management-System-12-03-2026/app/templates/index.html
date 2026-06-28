@@ -1,30 +1,9 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Đăng ký môn học</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link
-    rel="stylesheet"
-    href="{{ url_for('static', filename='css/student-pages.css') }}"
-  />
-</head>
-<body class="bg-gray-100 student-page registration-page">
-  <div class="flex items-center justify-between p-4">
-    <div class="flex items-center gap-3">
-      <span class="text-sm font-semibold">{{ student_code }} - {{ student_name }}</span>
-    </div>
-    <label class="student-nav" aria-label="Tiện ích sinh viên">
-      <span class="student-nav__label">Tiện ích sinh viên</span>
-      <select class="student-nav__select" onchange="window.location.href=this.value">
-        <option value="{{ url_for('index') }}" selected>Đăng ký môn học</option>
-        <option value="{{ url_for('timetable') }}">Xem thời khóa biểu</option>
-        <option value="{{ url_for('study_result') }}">Kết quả học tập</option>
-        <option value="{{ url_for('logout') }}">Đăng xuất</option>
-      </select>
-    </label>
-  </div>
+{% extends "layouts/student.html" %}
+
+{% block title %}Đăng ký môn học{% endblock %}
+{% block student_body_class %}registration-page{% endblock %}
+
+{% block content %}
 
 <div class="p-6">
   <h3 class="mb-4 text-2xl font-bold">Đăng ký môn học</h3>
@@ -250,10 +229,9 @@
   </table>
 </div>
 
-  <footer class="text-center text-sm text-gray-500 my-4">
-    <p>2024 Phòng Đào tạo - Đại học Mở</p>
-    <p class="mt-1">Chính sách bảo mật • Điều khoản sử dụng</p>
-  </footer>
+{% endblock %}
+
+{% block scripts %}
   <script>
     document.querySelectorAll("[data-course-combobox]").forEach(function (combobox) {
       const input = combobox.querySelector("[data-course-input]");
@@ -360,5 +338,4 @@
       });
     });
   </script>
-</body>
-</html>
+{% endblock %}

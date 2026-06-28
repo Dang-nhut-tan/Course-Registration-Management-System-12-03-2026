@@ -1,0 +1,21 @@
+{% extends "layouts/base.html" %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/student-pages.css') }}" />
+{% endblock %}
+
+{% block body_class %}bg-gray-100 student-page min-h-screen {% block student_body_class %}{% endblock %}{% endblock %}
+
+{% block body %}
+  {% block student_header %}
+    <div class="flex items-center justify-between p-4">
+      <div class="flex items-center gap-3">
+        <span class="text-sm font-semibold">{{ student_code }} - {{ student_name }}</span>
+      </div>
+      {% include "partials/student_nav.html" %}
+    </div>
+  {% endblock %}
+
+  {% block content %}{% endblock %}
+  {% block student_footer %}{% include "partials/footer.html" %}{% endblock %}
+{% endblock %}

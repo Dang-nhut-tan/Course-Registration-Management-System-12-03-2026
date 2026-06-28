@@ -1,0 +1,16 @@
+{% extends "layouts/base.html" %}
+
+{% block styles %}
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}" />
+{% endblock %}
+
+{% block body_class %}bg-gray-100 min-h-screen flex flex-col font-[Inter]{% endblock %}
+
+{% block body %}
+  {% block auth_header %}{% include "partials/site_header.html" %}{% endblock %}
+  <main class="flex-grow flex items-center justify-center p-4">
+    {% block content %}{% endblock %}
+  </main>
+  {% include "partials/footer.html" %}
+{% endblock %}
