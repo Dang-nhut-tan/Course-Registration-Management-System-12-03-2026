@@ -13,6 +13,7 @@ from flask_admin.contrib.sqla import ModelView
 from flask_admin.model.filters import BaseFilter
 from app.model import Course, ClassSection, ClassSectionType, Enrollment, EnrollmentStatus, Grade, Schedule, Room, UserRole, Campus, Teacher, TeacherCourse, CoursePrerequisite, CourseMajor, Faculty, Student, StudentClass
 from app.utils import check_room_conflict, check_teacher_conflict
+from app.api import create_record, delete_record, update_record
 
 DEFAULT_START_TIME = time(7, 30)
 DEFAULT_END_TIME = time(12, 0)
@@ -62,6 +63,8 @@ class AdminAccessIndexView (AdminIndexView):
     def inaccessible_callback(self, name, **kwargs):
         return redirect(url_for('login', next=request.url))
 
+IndexView = AdminAccessIndexView
+
 admin = Admin(app=app, name="Course Registration Administration", index_view=AdminAccessIndexView())
 
 class BaseView(ModelView):
@@ -73,7 +76,11 @@ class BaseView(ModelView):
 
     def delete_model(self, model):
         try:
-            return super(BaseView, self).delete_model(model)
+            self.on_model_delete(model)
+            self.session.flush()
+            delete_record(model, self.session)
+            self.after_model_delete(model)
+            return True
         except IntegrityError:
             db.session.rollback()
             flash("Không thể xóa dữ liệu này vì đang được sử dụng ở bảng khác.", "error")
@@ -82,6 +89,32 @@ class BaseView(ModelView):
             db.session.rollback()
             flash(f"Lỗi hệ thống khi xóa dữ liệu: {str(e)}", "error")
             return False
+
+    def create_model(self, form):
+        try:
+            model = self.build_new_instance()
+            form.populate_obj(model)
+            self._on_model_change(form, model, True)
+            create_record(model, self.session)
+            self.after_model_change(form, model, True)
+            return model
+        except Exception as e:
+            self.session.rollback()
+            flash(f"Không thể tạo dữ liệu qua API: {str(e)}", "error")
+            return False
+
+    def update_model(self, form, model):
+        try:
+            form.populate_obj(model)
+            self._on_model_change(form, model, False)
+            update_record(model, self.session)
+            self.after_model_change(form, model, False)
+            return True
+        except Exception as e:
+            self.session.rollback()
+            flash(f"Không thể cập nhật dữ liệu qua API: {str(e)}", "error")
+            return False
+
 
 class ClassSectionView(BaseView):
     form_excluded_columns = ("name", "schedules", "enrollments")
@@ -475,7 +508,7 @@ class ClassSectionView(BaseView):
         practice_section = self.find_practice_section(form, model)
         if practice_section:
             model.linked_section = practice_section
-            db.session.commit()
+            update_record(model)
             return
 
         course = self.get_course_from_form(form)
@@ -526,9 +559,8 @@ class ClassSectionView(BaseView):
             end_date=model.end_date,
             section_type=ClassSectionType.PRACTICE,
         )
-        db.session.add(practice_section)
-        db.session.flush()
-        db.session.add(
+        create_record(practice_section)
+        create_record(
             Schedule(
                 class_section_id=practice_section.id,
                 day_of_week=day,
@@ -537,7 +569,7 @@ class ClassSectionView(BaseView):
             )
         )
         model.linked_section = practice_section
-        db.session.commit()
+        update_record(model)
 
     def can_auto_fill_class_section(self, form, model=None):
         if self.get_course_from_form(form) is None:
@@ -599,12 +631,14 @@ class ClassSectionView(BaseView):
             schedule = Schedule.query.filter_by(class_section_id=model.id).first()
             if not schedule:
                 schedule = Schedule(class_section_id=model.id)
-                db.session.add(schedule)
 
             schedule.day_of_week = day
             schedule.start_time = self.get_schedule_start_time_from_form(form)
             schedule.end_time = self.get_schedule_end_time_from_form(form)
-            db.session.commit()
+            if schedule.id:
+                update_record(schedule)
+            else:
+                create_record(schedule)
 
         self.ensure_practice_section(form, model)
 
@@ -1303,7 +1337,6 @@ class GradeView(BaseView):
 
 admin.add_view(CourseView(Course, db.session))
 admin.add_view(ClassSectionView(ClassSection, db.session))
-admin.add_view(ScheduleView(Schedule, db.session))
 admin.add_view(GradeView(Grade, db.session))
 admin.add_view(RoomView(Room, db.session))
 admin.add_view(TeacherView(Teacher, db.session))

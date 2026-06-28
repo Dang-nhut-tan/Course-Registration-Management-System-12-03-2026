@@ -1,11 +1,9 @@
 from datetime import datetime, timedelta
+
 import pytest
-from app import db, utils
-<<<<<<< HEAD
-from app.model import ClassSection, ClassSectionType, Enrollment, EnrollmentStatus, StudentClassSection
-=======
+
+from app import api, db
 from app.model import ClassSection, ClassSectionType, Enrollment, EnrollmentStatus, Grade
->>>>>>> b99f523 (Update UI and model)
 from app.test.test_base import test_app, test_session
 from app.test.test_registration_utils import add_course_with_section, seed_student_context
 
@@ -28,10 +26,12 @@ def setup_data(test_session, test_app):
         test_session.commit()
         return db.session.get(Enrollment, 1)
 
+
 def test_cancel_by_owner(setup_data, test_app, test_session):
     with test_app.app_context():
         test_session.add(setup_data)
-        actual_cancel, message= utils.cancel_registered_course("2354050999", setup_data.id)
+        actual_cancel, message = api.cancel_enrollment("2354050999", setup_data.id)
+
         assert actual_cancel is True
         assert setup_data.status == EnrollmentStatus.CANCELED
 
@@ -39,7 +39,8 @@ def test_cancel_by_owner(setup_data, test_app, test_session):
 def test_cancel_by_other_student(setup_data, test_app, test_session):
     with test_app.app_context():
         test_session.add(setup_data)
-        actual_cancel, message = utils.cancel_registered_course("2354050112", setup_data.id)
+        actual_cancel, message = api.cancel_enrollment("2354050112", setup_data.id)
+
         assert actual_cancel is False
         assert setup_data.status == EnrollmentStatus.REGISTERED
 
@@ -51,7 +52,8 @@ def test_cancel_within_two_weeks(setup_data, test_app, test_session):
         section.start_date = datetime.now() - timedelta(weeks=1)
         test_session.commit()
 
-        actual_cancel, message = utils.cancel_registered_course("2354050999", setup_data.id)
+        actual_cancel, message = api.cancel_enrollment("2354050999", setup_data.id)
+
         assert actual_cancel is True
 
 
@@ -59,69 +61,71 @@ def test_cancel_after_two_weeks_fails(setup_data, test_app, test_session):
     with test_app.app_context():
         test_session.add(setup_data)
         section = db.session.get(ClassSection, 1)
-        section.start_date = datetime.now() - timedelta(weeks=3)
+        section.start_date = datetime.now() - timedelta(weeks=3)###########
         test_session.commit()
 
-        actual_cancel, message = utils.cancel_registered_course("2354050999", setup_data.id)
+        actual_cancel, message = api.cancel_enrollment("2354050999", setup_data.id)
+
         assert actual_cancel is False
 
-
+# thánh tuần 2>tuần 4
+        #tuần 0
 def test_cancel_no_midterm_score(setup_data, test_app, test_session):
     with test_app.app_context():
-<<<<<<< feature/admin
         test_session.add(setup_data)
-        actual_cancel, message = utils.cancel_registered_course("2354050999", setup_data.id)
+        actual_cancel, message = api.cancel_enrollment("2354050999", setup_data.id)
+
         assert actual_cancel is True
-=======
-        seed_student_context(test_session)
-        add_course_with_section(test_session, course_id=1, section_id=1)
-
-        enrollment = Enrollment(
-            id=1,
-            student_code="2354050999",
-            class_section_id=1,
-            status=EnrollmentStatus.REGISTERED,
-        )
-<<<<<<< HEAD
-        score = StudentClassSection(
-            student_code="2354050999",
-            class_section_id=1,
-            score_midterm=8.0,
-        )
-        test_session.add_all([enrollment, score])
-=======
-        grade = Grade(
-            enrollment=enrollment,
-            midterm_score=8.0,
-        )
-        test_session.add_all([enrollment, grade])
->>>>>>> b99f523 (Update UI and model)
-        test_session.commit()
->>>>>>> main
 
 
-<<<<<<< feature/admin
 def test_cancel_with_midterm_score(setup_data, test_app, test_session):
-=======
-        assert success is False
-<<<<<<< HEAD
-=======
-        assert message == "Không thể hủy môn vì đã có điểm giữa kỳ"
->>>>>>> b99f523 (Update UI and model)
-        assert enrollment.status == EnrollmentStatus.REGISTERED
+    with test_app.app_context():
+        test_session.add(setup_data)
+        grade = Grade(enrollment=setup_data, midterm_score=8.0)
+        test_session.add(grade)
+        test_session.commit()
+
+        actual_cancel, message = api.cancel_enrollment("2354050999", setup_data.id)
+
+        assert actual_cancel is False
+        assert setup_data.status == EnrollmentStatus.REGISTERED
 
 
 def test_cancel_registered_course_cancels_linked_practice_section(test_session, test_app):
->>>>>>> main
     with test_app.app_context():
-        test_session.add(setup_data)
-        score = StudentClassSection(
-            student_code="2354050999",
-            class_section_id=1,
-            score_midterm=8.0
+        seed_student_context(test_session)
+        course, theory_section = add_course_with_section(test_session, course_id=1, section_id=1)
+        practice_section = ClassSection(
+            id=2,
+            name="LHP 1 practice",
+            course_id=course.id,
+            semester=theory_section.semester,
+            max_students=50,
+            start_date=theory_section.start_date,
+            end_date=theory_section.end_date,
+            section_type=ClassSectionType.PRACTICE,
         )
-        test_session.add(score)
+        test_session.add(practice_section)
+        test_session.flush()
+
+        theory_section.linked_section_id = practice_section.id
+        theory_enrollment = Enrollment(
+            id=1,
+            student_code="2354050999",
+            class_section_id=theory_section.id,
+            status=EnrollmentStatus.REGISTERED,
+        )
+        practice_enrollment = Enrollment(
+            id=2,
+            student_code="2354050999",
+            class_section_id=practice_section.id,
+            status=EnrollmentStatus.REGISTERED,
+        )
+        test_session.add_all([theory_enrollment, practice_enrollment])
         test_session.commit()
 
-        actual_cancel, message = utils.cancel_registered_course("2354050999", setup_data.id)
-        assert actual_cancel is False
+        actual_cancel, message = api.cancel_enrollment("2354050999", theory_enrollment.id)
+
+        assert actual_cancel is True
+        assert theory_enrollment.status == EnrollmentStatus.CANCELED
+        assert practice_enrollment.status == EnrollmentStatus.CANCELED

@@ -180,7 +180,7 @@ def test_login_student_redirects_to_index(test_client):
     from app import index as index_routes
 
     user = User(id=1, student_code="2354050999", role=UserRole.STUDENT)
-    user.student = None
+    user.student = None###########
 
     with patch.object(index_routes.utils, "check_login_student", return_value=user):
         with patch.object(index_routes, "login_user"):

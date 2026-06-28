@@ -1,6 +1,6 @@
 from datetime import datetime, time, timedelta
 
-from app import db
+from app import api, db
 from app import utils
 from app.model import ClassSection,Course,CoursePrerequisite,Enrollment,EnrollmentStatus,Faculty,Major,Schedule,Student,StudentClass,TrainingProgram,TrainingProgramCourse
 from app.test.test_base import test_app, test_session
@@ -103,7 +103,7 @@ def test_prerequisite_requires_completed_course(test_session, test_app):
         )
         test_session.commit()
 
-        success, message = utils.register_section("2354050999", 2)
+        success, message = api.register_enrollment("2354050999", 2)
 
         assert success is False
 
@@ -116,7 +116,7 @@ def test_register_section_blocks_after_faculty_registration_deadline(test_sessio
         faculty.registration_deadline = datetime.now() - timedelta(days=1)
         test_session.commit()
 
-        success, message = utils.register_section("2354050999", section.id)
+        success, message = api.register_enrollment("2354050999", section.id)
 
         assert success is False
         assert "quá hạn đăng ký" in message
@@ -135,7 +135,7 @@ def test_register_section_blocks_before_faculty_registration_start_date(test_ses
         faculty.registration_deadline = datetime.now() + timedelta(days=7)
         test_session.commit()
 
-        success, message = utils.register_section("2354050999", section.id)
+        success, message = api.register_enrollment("2354050999", section.id)
 
         assert success is False
         assert "Chưa tới ngày" in message
@@ -207,7 +207,7 @@ def test_course_search_can_show_shared_course_from_other_faculty(test_session, t
             course_query="Course 2",
             faculty_id=1,
         )
-        success, message = utils.register_section("2354050999", shared_section.id)
+        success, message = api.register_enrollment("2354050999", shared_section.id)
 
         assert [section.id for section in sections] == [shared_section.id]
         assert success is True
@@ -224,7 +224,7 @@ def test_register_section_blocks_extra_class_section_outside_current_training_pr
             add_to_training_program=False,
         )
 
-        success, message = utils.register_section("2354050999", extra_section.id)
+        success, message = api.register_enrollment("2354050999", extra_section.id)
 
         assert success is False
         assert message == "Không thuộc ngành của bạn."
@@ -260,9 +260,9 @@ def test_section_registration_block_reason_blocks_over_credit_limit(test_session
         test_session.commit()
 
         reason = utils.get_section_registration_block_reason("2354050999", candidate_section)
-        success, message = utils.register_section("2354050999", candidate_section.id)
+        success, message = api.register_enrollment("2354050999", candidate_section.id)
 
-        assert reason == "Vượt giới hạn 25 tín chỉ trong 1 kỳ."
+        assert reason == "Vượt giới hạn 25 tín chỉ trong 1 kỳ."#######
         assert success is False
         assert message == "Vượt giới hạn 25 tín chỉ trong 1 kỳ."
 
@@ -366,7 +366,7 @@ def test_register_section_ignores_ended_same_course_enrollment(test_session, tes
         ])
         test_session.commit()
 
-        success, message = utils.register_section("2354050999", current_section.id)
+        success, message = api.register_enrollment("2354050999", current_section.id)
 
         assert success is True
         assert Enrollment.query.filter_by(
@@ -384,7 +384,7 @@ def test_register_section_uses_faculty_registration_deadline(test_session, test_
         faculty.registration_deadline = datetime.now() - timedelta(days=1)
         test_session.commit()
 
-        success, message = utils.register_section("2354050999", section.id)
+        success, message = api.register_enrollment("2354050999", section.id)
 
         assert success is False
         assert "quá hạn đăng ký" in message
@@ -408,7 +408,7 @@ def test_cancel_course_blocks_when_falling_below_minimum_credits(test_session, t
             )
         test_session.commit()
 
-        success, message = utils.cancel_registered_course("2354050999", 1)
+        success, message = api.cancel_enrollment("2354050999", 1)
 
         assert success is False
         assert "12" in message
@@ -432,7 +432,7 @@ def test_cancel_course_allows_below_minimum_for_graduation_semester(test_session
             )
         test_session.commit()
 
-        success, message = utils.cancel_registered_course("2354050999", 1)
+        success, message = api.cancel_enrollment("2354050999", 1)
         canceled_enrollment = db.session.get(Enrollment, 1)
 
         assert success is True

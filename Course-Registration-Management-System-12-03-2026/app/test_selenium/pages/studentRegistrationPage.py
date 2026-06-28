@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 
 from selenium.webdriver.common.by import By
 
-from app.test.pages.basePage import BasePage
+from app.test_selenium.pages.basePage import BasePage
 
 
 class StudentRegistrationPage(BasePage):
@@ -14,6 +14,9 @@ class StudentRegistrationPage(BasePage):
     REGISTERED_ROWS = (By.CSS_SELECTOR, ".registration-panel tbody tr")
     REGISTER_BUTTON = (By.CSS_SELECTOR, ".js-register-course button")
     CANCEL_BUTTON = (By.CSS_SELECTOR, ".js-cancel-course button")
+
+    SECOND_ROW_REGISTER_BUTTON = (By.CSS_SELECTOR,"tbody tr:nth-child(2) td:nth-child(10) form button")
+
 
     def open_page(self, **params):
         query = f"?{urlencode(params)}" if params else ""

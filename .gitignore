@@ -1,0 +1,3 @@
+# Markdown files are local documentation and must not be pushed.
+*.md
+

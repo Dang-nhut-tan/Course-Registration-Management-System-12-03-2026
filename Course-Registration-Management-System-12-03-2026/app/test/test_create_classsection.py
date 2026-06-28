@@ -2,7 +2,7 @@ from app import db
 import pytest
 from unittest.mock import patch, MagicMock
 from app.test.test_base import test_app, test_session
-from app.admin import ClassSectionView
+from app.admin import ClassSectionView, CourseView, TeacherView
 from datetime import datetime, timedelta, time
 
 from app.model import Campus, ClassSection, ClassSectionType, Course, Room, Schedule, StudentClass, Teacher, TeacherCourse, User, UserRole
@@ -28,7 +28,7 @@ def test_create_section_admin(test_app, test_admin, mock_form):
 
     with test_app.test_request_context():
         with patch('app.admin.current_user', admin_user):
-            with patch('flask_admin.contrib.sqla.ModelView.create_model', return_value=True):
+            with patch('app.admin.BaseView.create_model', return_value=True):
                 actual_result = test_admin.create_model(mock_form)
 
                 assert actual_result is True
@@ -131,11 +131,13 @@ def test_auto_link_practice_section(test_app, test_session, test_admin):
         test_session.add_all([course, campus, theory_room, practice_room, practice_section])
         test_session.commit()
 
-        test_admin.auto_link_practice_section(form)
+        actual_section = test_admin.find_practice_section(form)
 
-        assert form._fields["linked_section"].data == practice_section
+        assert actual_section == practice_section
 
 
+def test_teacher_form_only_edits_name():
+    teacher_admin = TeacherView(Teacher, db.session)
     assert teacher_admin.form_columns == ("name",)
 
 

@@ -3,6 +3,7 @@ from flask_login import login_user
 from app import app
 from app import utils
 from app import admin
+from app import api as api_routes
 from app.model import UserRole
 from datetime import datetime, timedelta
 
@@ -51,48 +52,6 @@ def logout():
 @app.route("/forgot-password")
 def forgot_password():
     return render_template("forgot-password.html")
-
-
-@app.route("/register-course", methods=["POST"])
-def register_course():
-    student_code = session.get("student_code")
-    if not student_code:
-        return redirect(url_for("login"))
-
-    class_section_id = request.form.get("class_section_id", type=int)
-    success, message = utils.register_section(student_code, class_section_id)
-    return redirect(
-        url_for(
-            "index",
-            course_query=request.form.get("course_query"),
-            faculty=request.form.get("faculty"),
-            training_program_semester=request.form.get("training_program_semester"),
-            page=request.form.get("page"),
-            msg=message,
-            msg_type="success" if success else "error",
-        )
-    )
-
-
-@app.route("/cancel-course", methods=["POST"])
-def cancel_course():
-    student_code = session.get("student_code")
-    if not student_code:
-        return redirect(url_for("login"))
-
-    enrollment_id = request.form.get("enrollment_id", type=int)
-    success, message = utils.cancel_registered_course(student_code, enrollment_id)
-    return redirect(
-        url_for(
-            "index",
-            course_query=request.form.get("course_query"),
-            faculty=request.form.get("faculty"),
-            training_program_semester=request.form.get("training_program_semester"),
-            page=request.form.get("page"),
-            msg=message,
-            msg_type="success" if success else "error",
-        )
-    )
 
 
 @app.route("/index")
@@ -210,7 +169,7 @@ def timetable():
     )
 
 @app.route("/study-result")
-@app.route("/grades")
+@app.route("/grades")#########
 def study_result():
     student_code = session.get("student_code")
     if not student_code:

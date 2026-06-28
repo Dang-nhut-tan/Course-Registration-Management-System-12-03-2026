@@ -56,6 +56,13 @@ class ClassSectionPage(AdminBasePage):
             and "/admin/classsection/new/" in self.driver.current_url
         )
 
+    def has_room_option(self, room_name):
+        room_select = self.find(*self.ROOM_SELECT)
+        return any(
+            room_name in option.text
+            for option in room_select.find_elements(By.TAG_NAME, "option")
+        )
+
     def edit_max_students(
         self,
         course_name,

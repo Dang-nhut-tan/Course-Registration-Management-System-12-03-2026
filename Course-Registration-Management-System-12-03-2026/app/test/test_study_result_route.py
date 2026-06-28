@@ -10,7 +10,7 @@ from app.test.test_base import test_app, test_client
 def test_study_result_redirects_to_login_when_not_logged_in(test_app, test_client):
     from app import index as index_routes
 
-    test_app.add_url_rule("/study-result", "study_result", index_routes.study_result)
+    test_app.add_url_rule("/study-result", "study_result", index_routes.study_result)##############
 
     response = test_client.get("/study-result")
 

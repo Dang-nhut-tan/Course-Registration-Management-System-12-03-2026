@@ -158,8 +158,6 @@
     display: block;
 }
 
-<<<<<<< HEAD
-=======
 .registration-page > .p-6,
 .registration-panel {
     margin: 24px 30px;
@@ -255,7 +253,6 @@
     margin-left: 12px;
 }
 
->>>>>>> b99f523 (Update UI and model)
 @media (max-width: 640px) {
     .student-nav {
         align-items: stretch;
@@ -266,11 +263,8 @@
     .student-nav__select {
         width: 100%;
     }
-<<<<<<< HEAD
-=======
 
     .study-summary {
         grid-template-columns: 1fr;
     }
->>>>>>> b99f523 (Update UI and model)
 }

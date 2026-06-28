@@ -1,6 +1,6 @@
 from selenium.webdriver.common.by import By
 
-from app.test.pages.adminBasePage import AdminBasePage
+from app.test_selenium.pages.adminBasePage import AdminBasePage
 
 
 class TeacherCoursePage(AdminBasePage):

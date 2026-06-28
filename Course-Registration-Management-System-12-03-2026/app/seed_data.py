@@ -26,12 +26,14 @@ sample_data = {
         {"id": 6, "code": "DH23CS02", "name": " DH23CS02", "school_year": "2023", "major_id": 2},
         {"id": 2, "code": "DH23TC01", "name": " DH23TC01", "school_year": "2023", "major_id": 3},
         {"id": 3, "code": "DH22MK01", "name": " DH22MK01", "school_year": "2022", "major_id": 4},
+        {"id": 7, "code": "DH22IM01", "name": " DH22IM01", "school_year": "2022", "major_id": 1},
     ],
     "training_programs": [
         {"id": 1, "name": "Chương trình đào tạo HTTQL khóa 2023", "major_id": 1, "school_year": "2023", "max_credits_per_semester": 25},
         {"id": 5, "name": "Chương trình đào tạo Khoa học máy tính khóa 2023", "major_id": 2, "school_year": "2023", "max_credits_per_semester": 25},
         {"id": 2, "name": "Chương trình đào tạo Tài chính - Ngân hàng khóa 2023", "major_id": 3, "school_year": "2023", "max_credits_per_semester": 25},
         {"id": 3, "name": "Chương trình đào tạo Marketing khóa 2022", "major_id": 4, "school_year": "2022", "max_credits_per_semester": 25},
+        {"id": 6, "name": "Chuong trinh dao tao HTTQL khoa 2022", "major_id": 1, "school_year": "2022", "max_credits_per_semester": 25},
     ],
     "students": [
         {"student_code": "2354050113", "name": "Đặng Nhựt Tân", "birth_year": 2003, "class_id": 1},
@@ -40,6 +42,7 @@ sample_data = {
         {"student_code": "2354050118", "name": "Hoàng Văn G", "birth_year": 2003, "class_id": 6},
         {"student_code": "2354050114", "name": "Trần Văn Y", "birth_year": 2003, "class_id": 2},
         {"student_code": "2354050115", "name": "Lê Văn C", "birth_year": 2002, "class_id": 3},
+        {"student_code": "2254050999", "name": "Sinh vien nam 4", "birth_year": 2002, "class_id": 7},
     ],
     "users": [
         {"id": 1, "username": "admin", "password": "admin123", "role": "admin"},
@@ -49,6 +52,7 @@ sample_data = {
         {"id": 7, "student_code": "2354050118", "password": "123456", "role": "student"},
         {"id": 3, "student_code": "2354050114", "password": "123456", "role": "student"},
         {"id": 4, "student_code": "2354050115", "password": "123456", "role": "student"},
+        {"id": 8, "student_code": "2254050999", "password": "123456", "role": "student"},
     ],
     "courses": [
         {"id": 1, "name": "Kiểm thử phần mềm", "credits": 3, "faculty_id": 1, "is_shared": False},
@@ -254,7 +258,7 @@ sample_data = {
         {"training_program_id": 1, "course_id": 42, "semester_no": 3},
         {"training_program_id": 1, "course_id": 2, "semester_no": 3},
         {"training_program_id": 1, "course_id": 43, "semester_no": 3},
-        {"training_program_id": 1, "course_id": 44, "semester_no": 4},
+        {"training_program_id": 1, "course_id": 44, "semester_no": 6},
         {"training_program_id": 1, "course_id": 7, "semester_no": 4},
         {"training_program_id": 1, "course_id": 3, "semester_no": 4},
         {"training_program_id": 1, "course_id": 45, "semester_no": 4},
@@ -361,6 +365,7 @@ sample_data = {
         {"training_program_id": 3, "course_id": 81, "semester_no": 7},
         {"training_program_id": 3, "course_id": 82, "semester_no": 8},
         {"training_program_id": 3, "course_id": 76, "semester_no": 8},
+        {"training_program_id": 6, "course_id": 64, "semester_no": 8},
     ],
     "teachers": [
         {"id": 1, "name": "Thầy B", "faculty_id": 1},
@@ -571,6 +576,7 @@ sample_data = {
         {"id": 7, "name": "DH23TC01", "student_class_id": 2, "course_id": 7, "teacher_id": 4, "room_id": 1, "semester": "2026-1", "max_students": 50, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
         {"id": 8, "name": "DH23TC01", "student_class_id": 2, "course_id": 8, "teacher_id": 4, "room_id": 2, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
         {"id": 9, "name": "DH22MK01", "student_class_id": 3, "course_id": 9, "teacher_id": 5, "room_id": 3, "semester": "2026-1", "max_students": 40, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
+        {"id": 120, "name": "DH22IM01", "student_class_id": 7, "course_id": 64, "teacher_id": 3, "room_id": 3, "semester": "2026-1", "max_students": 45, "start_date": "2026-06-01", "end_date": "2026-09-30", "registration_start_date": "2026-05-01", "registration_deadline": "2026-06-15"},
     ],
     "schedules": [
         {"id": 1, "class_section_id": 1, "day_of_week": 2, "start_time": "07:00", "end_time": "11:30"},
@@ -634,6 +640,7 @@ sample_data = {
         {"id": 7, "class_section_id": 7, "day_of_week": 2, "start_time": "13:00", "end_time": "17:30"},
         {"id": 8, "class_section_id": 8, "day_of_week": 4, "start_time": "07:00", "end_time": "11:30"},
         {"id": 9, "class_section_id": 9, "day_of_week": 6, "start_time": "13:00", "end_time": "17:30"},
+        {"id": 120, "class_section_id": 120, "day_of_week": 4, "start_time": "13:00", "end_time": "17:30"},
     ],
     "enrollments": [
         {"id": 1, "student_code": "2354050113", "class_section_id": 1, "status": "registered"},
@@ -667,6 +674,7 @@ sample_data = {
         {"id": 8, "student_code": "2354050118", "class_section_id": 6, "status": "registered"},
         {"id": 4, "student_code": "2354050114", "class_section_id": 7, "status": "registered"},
         {"id": 5, "student_code": "2354050115", "class_section_id": 9, "status": "registered"},
+        {"id": 32, "student_code": "2254050999", "class_section_id": 120, "status": "registered", "registered_at": "2026-05-10T08:00:00"},
     ],
     "grades": [
         {"id": 1, "enrollment_id": 9, "midterm_score": 9.4, "final_score": 9.2, "graded_at": "2025-12-25T08:30:00"},

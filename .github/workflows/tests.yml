@@ -1,0 +1,70 @@
+name: CI Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: Course-Registration-Management-System-12-03-2026
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reject Markdown files
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            compare_sha="$BASE_SHA"
+          else
+            compare_sha="$BEFORE_SHA"
+          fi
+
+          if [[ -z "$compare_sha" || "$compare_sha" =~ ^0+$ ]]; then
+            markdown_files=$(git diff-tree --root --no-commit-id --name-only -r HEAD -- '*.md')
+          else
+            markdown_files=$(git diff --name-only --diff-filter=ACMRT "$compare_sha" HEAD -- '*.md')
+          fi
+
+          if [[ -n "$markdown_files" ]]; then
+            echo "Markdown files are not allowed:"
+            echo "$markdown_files"
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: Course-Registration-Management-System-12-03-2026/requirements.txt
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Run API tests
+        run: pytest -q app/test/test_api.py

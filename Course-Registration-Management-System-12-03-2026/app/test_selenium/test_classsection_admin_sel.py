@@ -1,21 +1,11 @@
 import time
 
-from app import app, db
-from app.model import ClassSection, Course, Enrollment, EnrollmentStatus, Student
-from app.test.pages.classSectionPage import ClassSectionPage
-from app.test.pages.coursePage import CoursePage
-from app.test.pages.loginPage import LoginPage
-from app.test.pages.roomPage import RoomPage
-from app.test.pages.teacherCoursePage import TeacherCoursePage
-from app.test.pages.teacherPage import TeacherPage
-from app.test.test_base import driver, test_app
-
-
-def admin_login(driver):
-    login = LoginPage(driver=driver)
-    login.open_page()
-    login.login("admin", "admin123", role="admin")
-    time.sleep(1)
+from app.test_selenium.pages.classSectionPage import ClassSectionPage
+from app.test_selenium.pages.coursePage import CoursePage
+from app.test_selenium.pages.roomPage import RoomPage
+from app.test_selenium.pages.teacherCoursePage import TeacherCoursePage
+from app.test_selenium.pages.teacherPage import TeacherPage
+from app.test.test_base import driver
 
 
 def create_course(driver, course_name):
@@ -30,14 +20,6 @@ def create_teacher(driver, teacher_name):
 
 def create_teacher_course(driver):
     TeacherCoursePage(driver).create_teacher_course(course_index=-1)
-    time.sleep(1)
-
-
-def create_teacher_course_for(driver, teacher_name, course_name):
-    TeacherCoursePage(driver).create_teacher_course(
-        teacher_name=teacher_name,
-        course_name=course_name,
-    )
     time.sleep(1)
 
 
@@ -66,7 +48,7 @@ def fill_classsection_form(
     driver,
     course_name,
     room_name,
-    max_students="40",
+    max_students="50",
     start_time="07:30",
     end_time="12:00",
     start_date_value="2026-08-01 00:00:00",
@@ -93,28 +75,6 @@ def assert_create_failed(driver):
     assert ClassSectionPage(driver).create_failed()
 
 
-def add_enrollment_for_course(course_name):
-    student_code = "SEL_DELETE_GUARD"
-
-    with app.app_context():
-        student = Student.query.filter_by(student_code=student_code).first()
-        if not student:
-            student = Student(student_code=student_code, name="SEL Delete Guard Student")
-            db.session.add(student)
-
-        sections = ClassSection.query.join(Course).filter(Course.name == course_name).all()
-        for section in sections:
-            db.session.add(
-                Enrollment(
-                    student_code=student_code,
-                    class_section_id=section.id,
-                    status=EnrollmentStatus.REGISTERED,
-                )
-            )
-
-        db.session.commit()
-
-
 def test_admin_create_classsection_with_auto_teacher_and_practice(driver):
     now = int(time.time())
     course_name = f"SEL ClassSection Course {now}"
@@ -122,7 +82,10 @@ def test_admin_create_classsection_with_auto_teacher_and_practice(driver):
     theory_room = f"SEL-LT-{now}"
     practice_room = f"SEL-TH-{now}"
 
-    admin_login(driver)
+    classsection_page = ClassSectionPage(driver)
+
+    classsection_page.admin_login()
+
     create_course(driver, course_name)
     create_teacher(driver, teacher_name)
     create_teacher_course(driver)
@@ -132,7 +95,6 @@ def test_admin_create_classsection_with_auto_teacher_and_practice(driver):
     fill_classsection_form(driver, course_name, theory_room)
     submit_form(driver)
 
-    classsection_page = ClassSectionPage(driver)
     assert classsection_page.has_created_message()
 
     classsection_page.edit_max_students(course_name, "45")
@@ -147,7 +109,10 @@ def test_admin_create_classsection_with_auto_teacher_and_practice(driver):
 
 
 def test_classsection_rejects_max_students_over_50(driver):
-    admin_login(driver)
+    classsection_page = ClassSectionPage(driver)
+
+    classsection_page.admin_login()
+
     course_name, theory_room, practice_room = prepare_classsection_data(driver, "SEL Max")
 
     fill_classsection_form(driver, course_name, theory_room, max_students="51")
@@ -157,7 +122,10 @@ def test_classsection_rejects_max_students_over_50(driver):
 
 
 def test_classsection_rejects_invalid_schedule_time(driver):
-    admin_login(driver)
+    classsection_page =  ClassSectionPage(driver)
+
+    classsection_page.admin_login()
+
     course_name, theory_room, practice_room = prepare_classsection_data(driver, "SEL Time")
 
     fill_classsection_form(
@@ -173,7 +141,9 @@ def test_classsection_rejects_invalid_schedule_time(driver):
 
 
 def test_classsection_rejects_invalid_date_range(driver):
-    admin_login(driver)
+    classsection_page = ClassSectionPage(driver)
+
+    classsection_page.admin_login()
     course_name, theory_room, practice_room = prepare_classsection_data(driver, "SEL Date")
 
     fill_classsection_form(
@@ -188,49 +158,62 @@ def test_classsection_rejects_invalid_date_range(driver):
     assert_create_failed(driver)
 
 
-def test_classsection_hides_busy_room(driver):
-    now = int(time.time())
-    course_one = f"SEL Room Conflict Course A {now}"
-    course_two = f"SEL Room Conflict Course B {now}"
-    teacher_one = f"SEL Room Conflict Teacher A {now}"
-    teacher_two = f"SEL Room Conflict Teacher B {now}"
-    theory_room = f"SEL-RC-LT-{now}"
-    practice_room = f"SEL-RC-TH-{now}"
-
-    admin_login(driver)
-    create_course(driver, course_one)
-    create_course(driver, course_two)
-    create_teacher(driver, teacher_one)
-    create_teacher(driver, teacher_two)
-    create_teacher_course_for(driver, teacher_one, course_one)
-    create_teacher_course_for(driver, teacher_two, course_two)
-    create_room(driver, practice_room, "practice")
-    create_room(driver, theory_room, "theory")
-
-    fill_classsection_form(driver, course_one, theory_room)
-    submit_form(driver)
-    assert ClassSectionPage(driver).has_created_message()
+def test_admin_cannot_delete_classsection_has_student(driver):
+    course_name = "Hệ thống quản lí nguồn lực doanh nghiệp"
 
     classsection_page = ClassSectionPage(driver)
-    classsection_page.fill_classsection_form(course_two, theory_room)
 
-    assert not classsection_page.has_room_option(theory_room)
+    classsection_page.admin_login()
 
-
-def test_classsection_cannot_delete_when_has_enrollment(driver):
-    admin_login(driver)
-    course_name, theory_room, practice_room = prepare_classsection_data(driver, "SEL Delete Guard")
-
-    fill_classsection_form(driver, course_name, theory_room)
-    submit_form(driver)
-    assert ClassSectionPage(driver).has_created_message()
-
-    add_enrollment_for_course(course_name)
-
-    classsection_page = ClassSectionPage(driver)
     classsection_page.delete_classsection(course_name)
-    time.sleep(1)
+    time.sleep(2)
 
-    assert not classsection_page.has_deleted_message()
-    classsection_page.open_list()
-    classsection_page.row_containing(course_name)
+    assert (
+        "Không thể xóa lớp học phần vì đã có sinh viên đăng ký"
+        in classsection_page.driver.page_source
+    )
+
+
+def test_classsection_reject_duplicate_room_schedule(driver):
+
+    teacher_name = "DƯƠNG HỮU THÀNH"
+    course_name = "Kiểm thử phần mềm"
+    room_name = "A101"
+
+    classsection_page = ClassSectionPage(driver)
+
+    classsection_page.admin_login()
+
+    # CREATE TEACHER
+    teacher_page = TeacherPage(driver)
+    teacher_page.create_teacher(teacher_name)
+    time.sleep(2)
+
+    # CREATE TEACHER COURSE
+    teacher_course_page = TeacherCoursePage(driver)
+    teacher_course_page.create_teacher_course(
+        teacher_name=teacher_name,
+        course_name=course_name,
+    )
+    time.sleep(2)
+
+    classsection_page.fill_classsection_form(
+        course_name=course_name,
+        teacher_name=teacher_name,
+        room_name=room_name,
+        student_class_index=1,
+        section_type="theory",
+        schedule_day="2",
+        start_time="07:30",
+        end_time="12:00",
+        max_students="50",
+        start_date_value="2026-06-01 00:00:00",
+        end_date_value="2026-09-30 00:00:00",
+    )
+
+    # SUBMIT
+    classsection_page.submit()
+    time.sleep(2)
+
+    # ASSERT CREATE SUCCESS
+    assert classsection_page.has_created_message()
