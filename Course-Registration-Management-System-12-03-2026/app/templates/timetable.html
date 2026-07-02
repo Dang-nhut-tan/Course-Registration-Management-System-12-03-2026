@@ -6,18 +6,18 @@
 
 {% block content %}
 
-  <div class="max-w-7xl mx-auto p-6">
+  <div class="timetable-page max-w-7xl mx-auto p-6">
 
-    <div class="mb-4 flex flex-col md:flex-row justify-between items-end border-b-2 border-blue-800 pb-2">
-        <div>
+    <div class="timetable-header mb-4 flex flex-col md:flex-row justify-between items-end border-b-2 border-blue-800 pb-2">
+        <div class="timetable-heading min-w-0">
             <h1 class="text-2xl font-bold text-[#1f6096] uppercase mb-1">Thời Khóa Biểu</h1>
             <p class="font-semibold text-gray-800">{{ student_code }} - {{ student_name }}</p>
             <div class="text-lg font-bold text-blue-900 uppercase mt-2">Học kỳ: {{ semester }}</div>
         </div>
 
-        <div class="flex flex-col items-end gap-3">
+        <div class="timetable-actions flex flex-col items-end gap-3">
             {% include "partials/student_nav.html" %}
-            <div class="flex items-center gap-4 bg-gray-100 p-1 rounded-lg shadow-inner">
+            <div class="week-navigation flex items-center gap-4 bg-gray-100 p-1 rounded-lg shadow-inner">
                 {% if can_previous_week %}
                 <a href="{{ url_for('timetable', week=week-1) }}" class="px-3 py-1 hover:bg-white rounded shadow-sm transition">Tuần trước</a>
                 {% else %}
@@ -36,7 +36,7 @@
         </div>
     </div>
 
-    <div class="overflow-x-auto bg-white shadow-xl rounded-lg border border-gray-300">
+    <div class="timetable-scroll overflow-x-auto bg-white shadow-xl rounded-lg border border-gray-300" tabindex="0" aria-label="Thời khóa biểu, vuốt ngang để xem đầy đủ">
       <table class="timetable-table w-full border-collapse text-sm min-w-[1000px]">
         <thead>
             <tr class="bg-white text-gray-800 border-b-2 border-blue-800">
@@ -112,7 +112,7 @@
     </section>
     {% endif %}
 
-    <div class="mt-4 flex gap-6 text-xs font-medium items-center justify-end text-gray-700">
+    <div class="timetable-legend mt-4 flex gap-6 text-xs font-medium items-center justify-end text-gray-700">
         <div class="flex items-center gap-2"><div class="w-4 h-4 theory-bg rounded shadow-sm"></div> Môn Lý thuyết</div>
         <div class="flex items-center gap-2"><div class="w-4 h-4 practice-bg rounded shadow-sm"></div> Môn Thực hành</div>
     </div>

@@ -8,9 +8,9 @@
 
 {% block body %}
   {% block student_header %}
-    <div class="flex items-center justify-between p-4">
-      <div class="flex items-center gap-3">
-        <span class="text-sm font-semibold">{{ student_code }} - {{ student_name }}</span>
+    <div class="student-header flex items-center justify-between p-4">
+      <div class="min-w-0 flex items-center gap-3">
+        <span class="student-identity text-sm font-semibold">{{ student_code }} - {{ student_name }}</span>
       </div>
       {% include "partials/student_nav.html" %}
     </div>

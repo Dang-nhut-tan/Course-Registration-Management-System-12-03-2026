@@ -15,7 +15,7 @@
   {% endif %}
 
   <div class="registration-filter mb-4 rounded-lg bg-white p-4 shadow">
-    <form method="GET" action="{{ url_for('index') }}" class="grid grid-cols-[1fr_1fr_1fr_auto] gap-4">
+    <form method="GET" action="{{ url_for('index') }}" class="registration-filter-form">
       <select name="training_program_semester" class="w-full rounded border p-2">
         <option value="">-- Chọn kỳ CTĐT --</option>
         {% for semester_no in training_program_semesters %}
@@ -58,7 +58,7 @@
         {% endfor %}
       </select>
 
-      <button type="submit" class="rounded bg-blue-500 px-6 text-white">Lọc</button>
+      <button type="submit" class="registration-filter__submit rounded bg-blue-500 px-6 py-2 text-white">Lọc</button>
     </form>
   </div>
 
@@ -111,25 +111,25 @@
         {% set room_text = room_text ~ ' / ' ~ practice.room.name %}
         {% endif %}
         <tr class="border-t text-[13px]">
-          <td>{{ s.course.id }}</td>
-          <td>{{ s.course.name }}</td>
-          <td>{{ s.student_class.code if s.student_class else (s.name or '-') }}</td>
-          <td>{{ s.course.credits }}</td>
-          <td class="px-3 text-center">{{ campus_text }}</td>
-          <td class="px-3 text-center">{{ room_text }}</td>
-          <td>
+          <td data-label="Mã MH">{{ s.course.id }}</td>
+          <td data-label="Tên môn">{{ s.course.name }}</td>
+          <td data-label="Tên lớp">{{ s.student_class.code if s.student_class else (s.name or '-') }}</td>
+          <td data-label="Số tín chỉ">{{ s.course.credits }}</td>
+          <td data-label="Cơ sở" class="px-3 text-center">{{ campus_text }}</td>
+          <td data-label="Phòng" class="px-3 text-center">{{ room_text }}</td>
+          <td data-label="Số lượng">
             {{ section_capacity }}
             {% if practice %}
             <span class="text-slate-500">/ {{ practice_capacity }}</span>
             {% endif %}
           </td>
-          <td>
+          <td data-label="Còn lại">
             {{ section_capacity - registered_count }}
             {% if practice %}
             <span class="text-red-500">/ {{ practice_capacity - practice_registered_count }}</span>
             {% endif %}
           </td>
-          <td class="px-3 text-left leading-5">
+          <td data-label="Lịch học" class="px-3 text-left leading-5">
             {% for sch in s.schedules %}
             <div>LT: Thứ {{ sch.day_of_week }} ({{ sch.start_time.strftime('%H:%M') }} - {{ sch.end_time.strftime('%H:%M') }})</div>
             {% endfor %}
@@ -139,7 +139,7 @@
             {% endfor %}
             {% endif %}
           </td>
-          <td>
+          <td data-label="Hành động">
             {% if selected_training_program_semester and current_training_program_semester and selected_training_program_semester != current_training_program_semester %}
             <button class="cursor-not-allowed rounded bg-gray-400 px-3 py-1 text-white" disabled>Chỉ xem</button>
             {% else %}
@@ -159,7 +159,7 @@
     </table>
   </div>
   {% if total_pages > 1 %}
-  <div class="mt-4 flex items-center justify-center gap-2">
+  <div class="registration-pagination mt-4 flex items-center justify-center gap-2">
     {% if page > 1 %}
     <a class="rounded border px-3 py-1 text-sm hover:bg-slate-100" href="{{ url_for('index', course_query=selected_course_query, faculty=selected_faculty_id, training_program_semester=selected_training_program_semester, page=page - 1) }}">Trước</a>
     {% endif %}
@@ -178,6 +178,7 @@
 
 <div class="registration-panel mt-6 rounded-lg bg-white p-6 shadow">
   <h3 class="mb-4 text-lg font-bold">Danh sách môn học đã đăng ký: <strong>{{ registered_courses|length }}</strong> môn</h3>
+  <div class="registration-table-wrap">
   <table class="registration-table w-full text-center text-sm">
     <thead class="bg-gray-200">
       <tr>
@@ -193,11 +194,11 @@
     <tbody>
       {% for e in registered_courses %}
       <tr class="border-t" id="row-{{ e.id }}">
-        <td>{{ e.class_section.course.id }}</td>
-        <td>{{ e.class_section.course.name }}</td>
-        <td>{{ e.class_section.course.credits }}</td>
-        <td>{{ e.class_section.student_class.code if e.class_section.student_class else (e.class_section.name or '-') }}</td>
-        <td>
+        <td data-label="Mã MH">{{ e.class_section.course.id }}</td>
+        <td data-label="Tên môn">{{ e.class_section.course.name }}</td>
+        <td data-label="Số tín chỉ">{{ e.class_section.course.credits }}</td>
+        <td data-label="Tên lớp">{{ e.class_section.student_class.code if e.class_section.student_class else (e.class_section.name or '-') }}</td>
+        <td data-label="Cơ sở / Phòng">
           {{ e.class_section.room.campus.name }} - {{ e.class_section.room.name }}
           {% if e.class_section.linked_section %}
           <br>
@@ -206,14 +207,14 @@
           </span>
           {% endif %}
         </td>
-        <td>
+        <td data-label="Ngày đăng ký">
           {% if e.registered_at %}
           {{ e.registered_at.strftime('%H:%M %d/%m/%Y') }}
           {% else %}
           -
           {% endif %}
         </td>
-        <td>
+        <td data-label="Hành động">
           <form class="js-cancel-course" action="{{ url_for('api.cancel_course_api', enrollment_id=e.id) }}">
             <input type="hidden" name="enrollment_id" value="{{ e.id }}">
             <input type="hidden" name="course_query" value="{{ selected_course_query }}">
@@ -227,6 +228,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>
 
 {% endblock %}

@@ -68,4 +68,38 @@
     color: #ffffff;
 }
 
+.forgot-password-card,
+.site-header__name {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+    .site-header__inner {
+        gap: 12px;
+        padding-bottom: 10px;
+        padding-top: 10px;
+    }
+
+    .site-header__brand {
+        gap: 8px;
+    }
+
+    .site-header__name {
+        font-size: 16px;
+    }
+
+    .link-help {
+        flex: 0 0 auto;
+        padding: 8px 10px;
+    }
+
+    .forgot-password-card {
+        padding: 20px !important;
+    }
+
+    .forgot-password-card h1 {
+        font-size: 20px;
+    }
+}
+
 
