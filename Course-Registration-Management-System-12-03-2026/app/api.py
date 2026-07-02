@@ -1,5 +1,4 @@
-"""REST API endpoints and their database operations."""
-
+from dataclasses import dataclass
 from datetime import datetime, time, timedelta
 from enum import Enum
 
@@ -8,18 +7,23 @@ from flask_login import current_user
 from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError
 
-from app import app, db, utils
+from app import db, utils
+from app.exceptions import ApplicationError
 from app.model import (Campus, ClassSection, Course, CourseMajor,
                        CoursePrerequisite, Enrollment, EnrollmentStatus,
                        Faculty, Grade, Room, Student, Teacher, TeacherCourse,
                        ClassSectionType, UserRole)
 
 
-class ApiError(Exception):
-    def __init__(self, message, status_code=400):
-        super().__init__(message)
-        self.message = message
-        self.status_code = status_code
+# Backward-compatible name for callers that imported the old API exception.
+ApiError = ApplicationError
+
+
+@dataclass(frozen=True)
+class EnrollmentRegistrationResult:
+    """Successful enrollment metadata used by the HTTP response layer."""
+
+    linked_section_registered: bool = False
 
 
 RESOURCE_CONFIG = {
@@ -229,17 +233,15 @@ def register_enrollment(student_code, class_section_id):
             Student.student_code == student_code
         ).with_for_update().first()
         if not locked_student:
-            return False, "Không tìm thấy sinh viên."
+            raise ApiError("Không tìm thấy sinh viên.", 404)
 
         section = ClassSection.query.filter(
             ClassSection.id == class_section_id
         ).with_for_update().first()
         if not section:
-            return False, "Không tìm thấy lớp học phần."
+            raise ApiError("Không tìm thấy lớp học phần.", 404)
 
-        block_reason = utils.get_section_registration_block_reason(student_code, section)
-        if block_reason:
-            return False, block_reason
+        utils.validate_section_registration(student_code, section)
 
         related_section_ids = [section.id]
         if section.linked_section_id:
@@ -258,15 +260,19 @@ def register_enrollment(student_code, class_section_id):
 
         same_course = utils.has_registered_same_course(student_code, related_sections)
         if same_course:
-            return False, f"Môn {same_course.class_section.course.name} đã được đăng ký rồi."
+            raise ApiError(
+                f"Môn {same_course.class_section.course.name} đã được đăng ký rồi.",
+                409,
+            )
 
         conflict = utils.get_schedule_conflict(student_code, related_sections)
         if conflict:
             conflict_section, day_of_week, start_time, end_time = conflict
-            return False, (
+            raise ApiError(
                 f"Trùng lịch học với môn {conflict_section.course.name} vào thứ "
                 f"{day_of_week} ({start_time.strftime('%H:%M')} - "
-                f"{end_time.strftime('%H:%M')})."
+                f"{end_time.strftime('%H:%M')}).",
+                409,
             )
 
         enrollments = []
@@ -277,7 +283,7 @@ def register_enrollment(student_code, class_section_id):
                 Enrollment.class_section_id == related_section.id,
             ).first()
             if enrollment and enrollment.status == EnrollmentStatus.REGISTERED:
-                return False, "Môn này đã được đăng ký rồi."
+                raise ApiError("Môn này đã được đăng ký rồi.", 409)
 
             registered_count = Enrollment.query.filter(
                 Enrollment.class_section_id == related_section.id,
@@ -285,15 +291,18 @@ def register_enrollment(student_code, class_section_id):
             ).count()
             if registered_count >= utils.get_section_capacity_limit(related_section):
                 if related_section.section_type == ClassSectionType.PRACTICE:
-                    return False, "Lớp thực hành tương ứng đã hết chỗ."
-                return False, "Lớp học phần đã hết chỗ."
+                    raise ApiError("Lớp thực hành tương ứng đã hết chỗ.", 409)
+                raise ApiError("Lớp học phần đã hết chỗ.", 409)
             enrollments.append(enrollment)
 
         current_credits = utils.get_registered_credits(student_code)
         section_credits = section.course.credits or 0
         credit_limit = utils.get_credit_limit_per_semester(student_code)
         if current_credits + section_credits > credit_limit:
-            return False, f"Tổng số tín chỉ trong một kỳ không được vượt quá {credit_limit}."
+            raise ApiError(
+                f"Tổng số tín chỉ trong một kỳ không được vượt quá {credit_limit}.",
+                409,
+            )
 
         for related_section, enrollment in zip(related_sections, enrollments):
             if enrollment:
@@ -308,9 +317,9 @@ def register_enrollment(student_code, class_section_id):
                 ))
 
         db.session.commit()
-        if section.linked_section_id:
-            return True, "Đăng ký thành công và đã tự động gắn lớp thực hành tương ứng."
-        return True, "Đăng ký môn học thành công."
+        return EnrollmentRegistrationResult(
+            linked_section_registered=bool(section.linked_section_id)
+        )
     except Exception:
         db.session.rollback()
         raise
@@ -319,17 +328,17 @@ def register_enrollment(student_code, class_section_id):
 def cancel_enrollment(student_code, enrollment_id):
     enrollment = Enrollment.query.filter(Enrollment.id == enrollment_id).first()
     if not enrollment:
-        return False, "Không tìm thấy môn đã đăng ký."
+        raise ApiError("Không tìm thấy môn đã đăng ký.", 404)
     if enrollment.student_code != student_code:
-        return False, "Bạn không có quyền hủy môn học của sinh viên khác."
+        raise ApiError("Bạn không có quyền hủy môn học của sinh viên khác.", 403)
     if enrollment.status == EnrollmentStatus.CANCELED:
-        return False, "Môn học này đã được hủy trước đó."
+        raise ApiError("Môn học này đã được hủy trước đó.", 409)
 
     cancel_limit = enrollment.class_section.start_date + timedelta(weeks=2)
     if datetime.now() > cancel_limit:
-        return False, "Đã quá hạn hủy môn."
+        raise ApiError("Đã quá hạn hủy môn.", 409)
     if enrollment.grade and enrollment.grade.midterm_score is not None:
-        return False, "Không thể hủy môn vì đã có điểm giữa kỳ."
+        raise ApiError("Không thể hủy môn vì đã có điểm giữa kỳ.", 409)
 
     minimum_credits = utils.get_minimum_credits_to_enforce(student_code)
     canceled_credits = (
@@ -340,8 +349,9 @@ def cancel_enrollment(student_code, enrollment_id):
         utils.get_registered_credits(student_code) - canceled_credits, 0
     )
     if minimum_credits and credits_after_cancel < minimum_credits:
-        return False, (
-            f"Không thể hủy vì số tín chỉ sau khi hủy nhỏ hơn {minimum_credits}."
+        raise ApiError(
+            f"Không thể hủy vì số tín chỉ sau khi hủy nhỏ hơn {minimum_credits}.",
+            409,
         )
 
     enrollment.status = EnrollmentStatus.CANCELED
@@ -356,7 +366,7 @@ def cancel_enrollment(student_code, enrollment_id):
             linked_enrollment.status = EnrollmentStatus.CANCELED
 
     db.session.commit()
-    return True, "Hủy môn học thành công."
+    return enrollment
 
 
 api = Blueprint("api", __name__, url_prefix="/api")
@@ -404,23 +414,24 @@ def resource_item(resource, identifier):
 def register_course_api():
     student_code = session.get("student_code")
     if not student_code:
-        return _error("Bạn chưa đăng nhập.", 401)
+        raise ApiError("Bạn chưa đăng nhập.", 401)
     payload = request.get_json(silent=True) or {}
     class_section_id = payload.get("class_section_id")
     if not isinstance(class_section_id, int):
-        return _error("class_section_id không hợp lệ.", 400)
-    success, message = register_enrollment(student_code, class_section_id)
-    return jsonify({"success": success, "message": message}), 201 if success else 409
+        raise ApiError("class_section_id không hợp lệ.")
+
+    result = register_enrollment(student_code, class_section_id)
+    if result.linked_section_registered:
+        message = "Đăng ký thành công và đã tự động gắn lớp thực hành tương ứng."
+    else:
+        message = "Đăng ký môn học thành công."
+    return jsonify({"success": True, "message": message}), 201
 
 
 @api.delete("/enrollments/<int:enrollment_id>")
 def cancel_course_api(enrollment_id):
     student_code = session.get("student_code")
     if not student_code:
-        return _error("Bạn chưa đăng nhập.", 401)
-    success, message = cancel_enrollment(student_code, enrollment_id)
-    return jsonify({"success": success, "message": message}), 200 if success else 409
-
-
-if "api" not in app.blueprints:
-    app.register_blueprint(api)
+        raise ApiError("Bạn chưa đăng nhập.", 401)
+    cancel_enrollment(student_code, enrollment_id)
+    return jsonify({"success": True, "message": "Hủy môn học thành công."})

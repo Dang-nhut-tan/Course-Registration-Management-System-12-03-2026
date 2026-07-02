@@ -21,6 +21,8 @@ def test_timetable_renders_for_logged_in_student(test_app, test_client):
     test_app.add_url_rule("/timetable", "timetable", index_routes.timetable)
     context = {
         "schedules": [],
+        "schedule_rows": [],
+        "unscheduled_sections": [],
         "week_days": [],
         "week": 2,
         "semester_no": 1,

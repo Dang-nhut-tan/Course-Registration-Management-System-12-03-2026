@@ -5,7 +5,7 @@
 
 {% block content %}
 
-<div class="p-6">
+<div class="p-6" data-registration-page data-index-url="{{ url_for('index') }}">
   <h3 class="mb-4 text-2xl font-bold">Đăng ký môn học</h3>
 
   {% if message %}
@@ -15,7 +15,7 @@
   {% endif %}
 
   <div class="registration-filter mb-4 rounded-lg bg-white p-4 shadow">
-    <form method="GET" action="/index" class="grid grid-cols-[1fr_1fr_1fr_auto] gap-4">
+    <form method="GET" action="{{ url_for('index') }}" class="grid grid-cols-[1fr_1fr_1fr_auto] gap-4">
       <select name="training_program_semester" class="w-full rounded border p-2">
         <option value="">-- Chọn kỳ CTĐT --</option>
         {% for semester_no in training_program_semesters %}
@@ -231,111 +231,6 @@
 
 {% endblock %}
 
-{% block scripts %}
-  <script>
-    document.querySelectorAll("[data-course-combobox]").forEach(function (combobox) {
-      const input = combobox.querySelector("[data-course-input]");
-      const toggle = combobox.querySelector("[data-course-toggle]");
-      const menu = combobox.querySelector("[data-course-menu]");
-      const options = Array.from(combobox.querySelectorAll("[data-course-option]"));
-
-      function openMenu() {
-        combobox.classList.add("is-open");
-        filterOptions();
-      }
-
-      function closeMenu() {
-        combobox.classList.remove("is-open");
-      }
-
-      function filterOptions() {
-        const term = input.value.trim().toLowerCase();
-        let visibleCount = 0;
-
-        options.forEach(function (option) {
-          const isVisible = !term || option.dataset.searchText.includes(term);
-          option.hidden = !isVisible;
-          if (isVisible) {
-            visibleCount += 1;
-          }
-        });
-
-        combobox.classList.toggle("has-no-results", visibleCount === 0);
-      }
-
-      input.addEventListener("focus", openMenu);
-      input.addEventListener("input", function () {
-        openMenu();
-        filterOptions();
-      });
-
-      toggle.addEventListener("click", function () {
-        if (combobox.classList.contains("is-open")) {
-          closeMenu();
-        } else {
-          input.focus();
-          openMenu();
-        }
-      });
-
-      options.forEach(function (option) {
-        option.addEventListener("click", function () {
-          input.value = option.dataset.value;
-          closeMenu();
-        });
-      });
-
-      document.addEventListener("click", function (event) {
-        if (!combobox.contains(event.target)) {
-          closeMenu();
-        }
-      });
-
-      input.addEventListener("keydown", function (event) {
-        if (event.key === "Escape") {
-          closeMenu();
-        }
-      });
-    });
-
-    async function submitEnrollmentApi(form, method, payload) {
-      const button = form.querySelector("button[type='submit']");
-      button.disabled = true;
-      try {
-        const response = await fetch(form.action, {
-          method: method,
-          headers: {"Content-Type": "application/json"},
-          body: payload ? JSON.stringify(payload) : null,
-        });
-        const result = await response.json();
-        const params = new URLSearchParams(window.location.search);
-        const formData = new FormData(form);
-        ["course_query", "faculty", "training_program_semester", "page"].forEach(function (key) {
-          if (formData.get(key)) params.set(key, formData.get(key));
-        });
-        params.set("msg", result.message || "API không trả về thông báo.");
-        params.set("msg_type", result.success ? "success" : "error");
-        window.location.assign(`{{ url_for('index') }}?${params.toString()}`);
-      } catch (error) {
-        alert("Không thể kết nối đến API.");
-        button.disabled = false;
-      }
-    }
-
-    document.querySelectorAll(".js-register-course").forEach(function (form) {
-      form.addEventListener("submit", function (event) {
-        event.preventDefault();
-        submitEnrollmentApi(form, "POST", {
-          class_section_id: Number(new FormData(form).get("class_section_id")),
-        });
-      });
-    });
-
-    document.querySelectorAll(".js-cancel-course").forEach(function (form) {
-      form.addEventListener("submit", function (event) {
-        event.preventDefault();
-        submitEnrollmentApi(form, "DELETE");
-      });
-    });
-  </script>
+{% block student_scripts %}
+  <script defer src="{{ url_for('static', filename='js/student-registration.js') }}"></script>
 {% endblock %}

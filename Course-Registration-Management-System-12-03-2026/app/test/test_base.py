@@ -2,7 +2,7 @@ import pytest
 from flask import Flask
 from selenium import webdriver
 
-from app import db
+from app import babel, db
 from app.utils import login_manager
 
 def create_app():
@@ -13,6 +13,7 @@ def create_app():
     app.config["SECRET_KEY"]= "4365ur76ifkyfvfytidyfyj"
 
     db.init_app(app)
+    babel.init_app(app, locale_selector=lambda: "vi")
     login_manager.init_app(app)
 
     from app import index as index_routes

@@ -1,0 +1,12 @@
+import os
+
+
+class Config:
+    SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-change-me")
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        "DATABASE_URL",
+        "mysql+pymysql://root:123456@localhost/qldt_db?charset=utf8mb4",
+    )
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    BABEL_DEFAULT_LOCALE = "vi"
+

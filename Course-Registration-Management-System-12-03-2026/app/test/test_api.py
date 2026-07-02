@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 
 from app import db
-from app.api import api
+from app.api import EnrollmentRegistrationResult, api
 from app.model import Faculty, User, UserRole
 from app.test.test_base import test_app
 
@@ -56,7 +56,10 @@ def test_student_enrollment_api_uses_logged_in_student(api_client):
     with api_client.session_transaction() as student_session:
         student_session["student_code"] = "SV001"
 
-    with patch("app.api.register_enrollment", return_value=(True, "Đăng ký thành công")) as register:
+    with patch(
+        "app.api.register_enrollment",
+        return_value=EnrollmentRegistrationResult(),
+    ) as register:
         response = api_client.post("/api/enrollments", json={"class_section_id": 12})
 
     assert response.status_code == 201

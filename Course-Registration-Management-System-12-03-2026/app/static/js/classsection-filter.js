@@ -1,10 +1,15 @@
-(function () {
+(() => {
   const dataElement = document.getElementById('classsection-filter-data');
-  if (!dataElement) {
+  if (!dataElement) return;
+
+  let data;
+  try {
+    data = JSON.parse(dataElement.textContent);
+  } catch (_error) {
     return;
   }
 
-  const data = JSON.parse(dataElement.textContent);
+  const emptyValue = '__None';
   const courseSelect = document.querySelector('[name="course"]');
   const studentClassSelect = document.querySelector('[name="student_class"]');
   const teacherSelect = document.querySelector('[name="teacher"]');
@@ -16,17 +21,15 @@
   const startTimeSelect = document.querySelector('[name="schedule_start_time"]');
   const endTimeSelect = document.querySelector('[name="schedule_end_time"]');
 
-  if (!courseSelect || !teacherSelect || !roomSelect) {
-    return;
-  }
+  if (!courseSelect || !teacherSelect || !roomSelect) return;
 
   function toMinutes(value) {
     if (!value || !value.includes(':')) {
       return null;
     }
 
-    const parts = value.split(':');
-    return Number(parts[0]) * 60 + Number(parts[1]);
+    const [hours, minutes] = value.split(':').map(Number);
+    return hours * 60 + minutes;
   }
 
   function overlapsBusyTime(item) {
@@ -91,7 +94,7 @@
     const useCourseTeachers = courseTeacherIds.length > 0;
 
     clearOptions(teacherSelect);
-    addOption(teacherSelect, '__None', '');
+    addOption(teacherSelect, emptyValue, '');
 
     data.teachers.forEach(function (teacher) {
       const matchCourse = useCourseTeachers && courseTeacherIds.includes(teacher.id);
@@ -101,17 +104,17 @@
       }
     });
 
-    teacherSelect.value = hasOption(teacherSelect, selected) ? selected : '__None';
-    teacherSelect.dispatchEvent(new Event('change'));
+    teacherSelect.value = hasOption(teacherSelect, selected) ? selected : emptyValue;
+    teacherSelect.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   function filterRooms() {
     const selected = roomSelect.value;
-    const sectionType = sectionTypeSelect ? sectionTypeSelect.value : '';
+    const sectionType = sectionTypeSelect ? sectionTypeSelect.value.toLowerCase() : '';
     const roomType = sectionType === 'practice' ? 'practice' : 'theory';
 
     clearOptions(roomSelect);
-    addOption(roomSelect, '__None', '');
+    addOption(roomSelect, emptyValue, '');
 
     data.rooms.forEach(function (room) {
       if (room.room_type === roomType && !isBusy(room.id, 'room_id')) {
@@ -119,8 +122,8 @@
       }
     });
 
-    roomSelect.value = hasOption(roomSelect, selected) ? selected : '__None';
-    roomSelect.dispatchEvent(new Event('change'));
+    roomSelect.value = hasOption(roomSelect, selected) ? selected : emptyValue;
+    roomSelect.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   function filterLinkedSections() {
@@ -132,18 +135,18 @@
     const courseId = courseSelect.value;
     const studentClassId = studentClassSelect ? studentClassSelect.value : '';
     const semester = semesterInput ? semesterInput.value : '';
-    const sectionType = sectionTypeSelect ? sectionTypeSelect.value : '';
+    const sectionType = sectionTypeSelect ? sectionTypeSelect.value.toLowerCase() : '';
     const selectedRoom = data.rooms.find(function (room) {
       return room.id === roomSelect.value;
     });
     const campusId = selectedRoom ? selectedRoom.campus_id : '';
 
     clearOptions(linkedSectionSelect);
-    addOption(linkedSectionSelect, '__None', '');
+    addOption(linkedSectionSelect, emptyValue, '');
 
     if (sectionType === 'practice') {
-      linkedSectionSelect.value = '__None';
-      linkedSectionSelect.dispatchEvent(new Event('change'));
+      linkedSectionSelect.value = emptyValue;
+      linkedSectionSelect.dispatchEvent(new Event('change', { bubbles: true }));
       return;
     }
 
@@ -161,8 +164,8 @@
 
     linkedSectionSelect.value = hasOption(linkedSectionSelect, selected)
       ? selected
-      : (matches.length ? matches[0].id : '__None');
-    linkedSectionSelect.dispatchEvent(new Event('change'));
+      : (matches.length ? matches[0].id : emptyValue);
+    linkedSectionSelect.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   function updateFilters() {
@@ -170,13 +173,11 @@
     filterRooms();
   }
 
-  [courseSelect, studentClassSelect, sectionTypeSelect, semesterInput, daySelect, startTimeSelect, endTimeSelect].forEach(function (field) {
-    if (field) {
-      field.addEventListener('change', updateFilters);
-      field.addEventListener('keyup', updateFilters);
-    }
-  });
+  [courseSelect, studentClassSelect, sectionTypeSelect, daySelect, startTimeSelect, endTimeSelect]
+    .filter(Boolean)
+    .forEach((field) => field.addEventListener('change', updateFilters));
+  if (semesterInput) semesterInput.addEventListener('input', updateFilters);
   roomSelect.addEventListener('change', filterLinkedSections);
 
   updateFilters();
-}());
+})();

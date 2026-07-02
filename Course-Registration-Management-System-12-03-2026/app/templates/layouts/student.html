@@ -19,3 +19,8 @@
   {% block content %}{% endblock %}
   {% block student_footer %}{% include "partials/footer.html" %}{% endblock %}
 {% endblock %}
+
+{% block scripts %}
+  <script defer src="{{ url_for('static', filename='js/student-navigation.js') }}"></script>
+  {% block student_scripts %}{% endblock %}
+{% endblock %}

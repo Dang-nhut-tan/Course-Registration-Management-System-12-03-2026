@@ -10,7 +10,7 @@ from flask_login import UserMixin
 from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Time, UniqueConstraint
 from sqlalchemy.orm import relationship
 
-from app import app, db
+from app.extensions import db
 
 
 class BaseModel(db.Model):
@@ -176,7 +176,7 @@ class TeacherCourse(db.Model):
             return f"{self.course.name} - {self.teacher.name}"
         if self.course:
             return self.course.name
-        return f"TeacherCourse {self.teacher_id}, {self.course_id}"
+        return f"Phân công giảng dạy {self.teacher_id}, {self.course_id}"
 
 
 class Student(db.Model):
@@ -239,7 +239,7 @@ class Enrollment(BaseModel):
     student = relationship("Student", backref="enrollments")
 
     def __str__(self):
-        student_label = self.student_code or f"Enrollment {self.id}"
+        student_label = self.student_code or f"Đăng ký môn học {self.id}"
         if self.student and self.student.name:
             student_label = f"{self.student_code} - {self.student.name}"
 
@@ -248,9 +248,9 @@ class Enrollment(BaseModel):
             return student_label
 
         course = section.course
-        course_label = course.name if course else f"Course {section.course_id}"
-        section_label = section.name or f"Class section {section.id}"
-        semester_label = section.semester or "No semester"
+        course_label = course.name if course else f"Môn học {section.course_id}"
+        section_label = section.name or f"Lớp học phần {section.id}"
+        semester_label = section.semester or "Chưa có học kỳ"
         return f"{student_label} | {course_label} | {section_label} | {semester_label}"
 
 
