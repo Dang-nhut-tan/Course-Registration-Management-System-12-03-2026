@@ -17,28 +17,13 @@ class FacultyPage(AdminBasePage):
 
     def click_edit_faculty(self,faculty_name):
         self.open_list()
-        rows = self.driver.find_elements(
-            *self.FACULTY_ROWS
-        )
-        for row in rows:
-            if faculty_name in row.text:
-                row.find_element(
-                    *self.EDIT_BUTTON
-                ).click()
-                return
-
-        raise AssertionError(f"Không tìm thấy khoa: {faculty_name}")
+        self.click_edit_for_row_containing(faculty_name)
 
     def set_registration_deadline(self,deadline_value):
-        deadline_input = self.driver.find_element(*self.REGISTRATION_DEADLINE_INPUT)
-        self.driver.execute_script(
-            "arguments[0].value = arguments[1];",
-            deadline_input,
-            deadline_value,
-        )
+        self.set_value(*self.REGISTRATION_DEADLINE_INPUT, deadline_value)
 
     def save_faculty(self):
-        self.driver.find_element(*self.SUBMIT_BUTTON).click()
+        self.submit()
 
     def update_registration_deadline(self,faculty_name,deadline_value):
         self.click_edit_faculty(faculty_name)

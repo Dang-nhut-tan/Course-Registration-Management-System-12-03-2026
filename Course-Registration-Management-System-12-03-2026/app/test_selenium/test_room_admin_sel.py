@@ -52,10 +52,7 @@ def test_admin_cannot_delete_room_used_by_classsection(driver):
     time.sleep(2)
 
     # ASSERT DELETE FAILED MESSAGE
-    assert (
-        DELETE_ROOM_FAILED_MESSAGE
-        in driver.page_source
-    )
+    assert room_page.has_message(DELETE_ROOM_FAILED_MESSAGE)
 
     # ASSERT ROOM STILL EXISTS
-    assert (room_name in driver.page_source)
+    assert room_page.has_message(room_name)

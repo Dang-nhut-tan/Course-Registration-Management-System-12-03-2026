@@ -1,4 +1,4 @@
-from app.model import ClassSection, ClassSectionType, Enrollment
+from app.model import ClassSection, ClassSectionType, Enrollment, EnrollmentStatus
 
 
 def calculate_total_score(midterm_score, final_score):
@@ -65,6 +65,7 @@ def build_grade_result(enrollment):
 def get_student_grade_results(student_code):
     enrollments = Enrollment.query.join(ClassSection).filter(
         Enrollment.student_code == student_code,
+        Enrollment.status == EnrollmentStatus.REGISTERED,
         ClassSection.section_type == ClassSectionType.THEORY,
     ).order_by(ClassSection.semester.desc(), ClassSection.id).all()
 

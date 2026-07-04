@@ -81,7 +81,8 @@
     {% endif %}
   </p>
 
-  <div class="registration-table-wrap overflow-hidden rounded-lg bg-white shadow">
+  <p class="mobile-table-hint">Vuốt ngang bảng để xem đầy đủ thông tin</p>
+  <div class="registration-table-wrap overflow-hidden rounded-lg bg-white shadow" tabindex="0" aria-label="Danh sách lớp học phần, vuốt ngang để xem đầy đủ">
     <table class="registration-table w-full text-center text-sm">
       <thead class="bg-gray-200">
         <tr>
@@ -178,7 +179,8 @@
 
 <div class="registration-panel mt-6 rounded-lg bg-white p-6 shadow">
   <h3 class="mb-4 text-lg font-bold">Danh sách môn học đã đăng ký: <strong>{{ registered_courses|length }}</strong> môn</h3>
-  <div class="registration-table-wrap">
+  <p class="mobile-table-hint">Vuốt ngang bảng để xem đầy đủ thông tin</p>
+  <div class="registration-table-wrap" tabindex="0" aria-label="Danh sách môn đã đăng ký, vuốt ngang để xem đầy đủ">
   <table class="registration-table w-full text-center text-sm">
     <thead class="bg-gray-200">
       <tr>

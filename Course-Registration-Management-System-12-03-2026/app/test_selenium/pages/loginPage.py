@@ -4,8 +4,6 @@ from app.test_selenium.pages.basePage import BasePage
 
 
 class LoginPage(BasePage):
-    URL = "http://127.0.0.1:5000/"
-
     ROLE_COMBOBOX = (By.ID, "roleCombobox")
     ROLE_BUTTON = (By.ID, "roleComboboxButton")
     ROLE_TEXT = (By.ID, "roleComboboxText")
@@ -17,7 +15,7 @@ class LoginPage(BasePage):
     FORGOT_PASSWORD_LINK = (By.CSS_SELECTOR, "a[href*='forgot-password']")
 
     def open_page(self):
-        self.open(self.URL)
+        self.open_path("/")
 
     def select_role(self, role):
         self.click(*self.ROLE_BUTTON)
@@ -37,9 +35,14 @@ class LoginPage(BasePage):
         self.input_student_code(student_code)
         self.input_password(password)
         self.click_login()
+        expected_path = "/admin" if role == "admin" else "/index"
+        self.wait_for_url_contains(expected_path)
 
     def get_error_message(self):
-        return self.find(*self.ERROR_MESSAGE).text
+        return self.text(*self.ERROR_MESSAGE)
+
+    def logout(self):
+        self.open_path("/logout")
 
     def click_forgot_password(self):
         self.click(*self.FORGOT_PASSWORD_LINK)

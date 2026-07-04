@@ -1,11 +1,10 @@
 from selenium.webdriver.common.by import By
-from app.test_selenium.pages.loginPage import LoginPage
-import time
 from app.test_selenium.pages.basePage import BasePage
+from app.test_selenium.pages.loginPage import LoginPage
 
 
 class AdminBasePage(BasePage):
-    BASE_URL = "http://127.0.0.1:5000/admin"
+    ADMIN_PATH = "admin"
     LIST_PAGE_SIZE = 1000
     MAX_LIST_PAGES = 100
     CREATE_LINK = (By.LINK_TEXT, "Create")
@@ -19,7 +18,7 @@ class AdminBasePage(BasePage):
     DELETE_BUTTON = (By.CSS_SELECTOR, "form[action$='/delete/'] button")
 
     def open_admin_path(self, path):
-        self.open(f"{self.BASE_URL}/{path.lstrip('/')}")
+        self.open_path(f"{self.ADMIN_PATH}/{path.lstrip('/')}")
 
     def open_list_path(self, path):
         separator = "&" if "?" in path else "?"
@@ -35,10 +34,10 @@ class AdminBasePage(BasePage):
         self.click(*self.SUBMIT_BUTTON)
 
     def has_success_message(self):
-        return self.SUCCESS_MESSAGE in self.driver.page_source
+        return self.has_message(self.SUCCESS_MESSAGE)
 
     def has_message(self, message):
-        return message in self.driver.page_source
+        return self.contains_text(message)
 
     def has_created_message(self):
         return self.has_message(self.CREATED_MESSAGE)
@@ -75,8 +74,7 @@ class AdminBasePage(BasePage):
         row.find_element(*self.DELETE_BUTTON).click()
         self.driver.switch_to.alert.accept()
 
-    def admin_login(self,username="admin",password="admin123"):
+    def admin_login(self, username="admin", password="admin123"):
         login = LoginPage(self.driver)
         login.open_page()
-        login.login(username,password,role="admin")
-        time.sleep(1)
+        login.login(username, password, role="admin")

@@ -322,6 +322,10 @@
     outline-offset: 2px;
 }
 
+.mobile-table-hint {
+    display: none;
+}
+
 @media (max-width: 1024px) {
     .registration-filter-form {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -493,5 +497,83 @@
         flex-wrap: wrap;
         gap: 12px !important;
         justify-content: flex-start !important;
+    }
+}
+
+/* Registration lists stay compact on phones: preserve the table and give it
+   its own horizontal scroll instead of turning every row into a tall card. */
+@media (max-width: 768px) {
+    .mobile-table-hint {
+        display: block;
+        margin: 0 0 8px;
+        color: var(--color-text-muted);
+        font-size: 12px;
+        font-style: italic;
+    }
+
+    .registration-table-wrap {
+        overflow-x: auto !important;
+        border: 1px solid var(--color-border-soft);
+        border-radius: var(--radius-md) !important;
+        overscroll-behavior-inline: contain;
+    }
+
+    .registration-table-wrap:focus-visible {
+        outline: 3px solid rgba(31, 96, 150, 0.35);
+        outline-offset: 2px;
+    }
+
+    .registration-table {
+        display: table;
+        min-width: 860px;
+        width: 100%;
+        font-size: 12px;
+    }
+
+    .registration-panel .registration-table {
+        min-width: 760px;
+    }
+
+    .registration-table thead {
+        display: table-header-group;
+    }
+
+    .registration-table tbody {
+        display: table-row-group;
+        width: auto;
+    }
+
+    .registration-table tr {
+        display: table-row;
+        width: auto;
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .registration-table th,
+    .registration-table td {
+        display: table-cell;
+        width: auto;
+        min-height: 0;
+        padding: 8px !important;
+        text-align: center !important;
+        overflow-wrap: normal;
+        word-break: normal;
+    }
+
+    .registration-table td[data-label="Tên môn"],
+    .registration-table td[data-label="Lịch học"] {
+        text-align: left !important;
+    }
+
+    .registration-table td::before {
+        display: none;
+        content: none;
+    }
+
+    .registration-table button {
+        min-height: 34px;
     }
 }

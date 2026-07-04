@@ -168,9 +168,8 @@ def test_admin_cannot_delete_classsection_has_student(driver):
     classsection_page.delete_classsection(course_name)
     time.sleep(2)
 
-    assert (
+    assert classsection_page.has_message(
         "Không thể xóa lớp học phần vì đã có sinh viên đăng ký"
-        in classsection_page.driver.page_source
     )
 
 

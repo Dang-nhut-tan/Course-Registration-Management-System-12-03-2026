@@ -1,7 +1,8 @@
 
-import time
 from app.test_selenium.pages.loginPage import LoginPage
 from app.test_selenium.pages.studentRegistrationPage import StudentRegistrationPage
+from app.test_selenium.pages.studentAcademicPage import StudentAcademicPage
+from app.test_selenium.registration_test_data import create_registration_scenario
 from app.test.test_base import driver
 
 
@@ -12,27 +13,18 @@ ALREADY_REGISTERED_MESSAGE = "đã được đăng ký rồi"
 def student_login(driver, student_code):
     login = LoginPage(driver=driver)
     login.open_page()
-    login.login(student_code,"123456")
-    time.sleep(1)
-
-def safe_register_course(registration_page,course_name):
-    try:
-        registration_page.register_course(course_name)
-        time.sleep(2)
-    except Exception:
-        pass
+    login.login(student_code, "123456")
 
 
 def test_student_register_course_updates_timetable_and_grade_page(driver):
-    course_name = "Khóa luận tốt nghiệp"
-    student_login(driver,"2354050113")
+    scenario = create_registration_scenario("SEL Register Course")
+    course_name = scenario.course_name
+    student_login(driver, scenario.student_code)
     registration_page = StudentRegistrationPage(driver)
     registration_page.open_page(course_query=course_name)
-    time.sleep(2)
 
     before_register_count = registration_page.get_registered_count()
-    safe_register_course(registration_page,course_name)
-    time.sleep(2)
+    registration_page.register_course(course_name)
     assert (
             REGISTER_SUCCESS_MESSAGE
             in registration_page.get_message()
@@ -44,40 +36,34 @@ def test_student_register_course_updates_timetable_and_grade_page(driver):
             == before_register_count + 1
     )
 
-    driver.get("http://127.0.0.1:5000/timetable")
-    time.sleep(2)
-    assert (
-        course_name
-        in driver.page_source
-    )
+    academic_page = StudentAcademicPage(driver)
+    academic_page.open_timetable()
+    assert academic_page.has_course(course_name)
 
-    driver.get("http://127.0.0.1:5000/grades")
-    time.sleep(2)
-    assert (
-        course_name
-        in driver.page_source
-    )
+    academic_page.open_grades()
+    assert academic_page.has_course(course_name)
 
 
 
 def test_student_cancel_course_removes_timetable_and_grade_page(driver):
-    course_name = "Kiến trúc phần mềm"
-    student_login(driver,"2354050113")
+    scenario = create_registration_scenario(
+        "SEL Cancel Course",
+        baseline_credits=12,
+    )
+    course_name = scenario.course_name
+    student_login(driver, scenario.student_code)
     registration_page = StudentRegistrationPage(driver)
 
     # REGISTER COURSE FIRST
     registration_page.open_page(course_query=course_name)
-    time.sleep(2)
-    safe_register_course(registration_page,course_name)
-    time.sleep(2)
+    registration_page.register_course(course_name)
+    assert REGISTER_SUCCESS_MESSAGE in registration_page.get_message()
     # OPEN REGISTERED COURSES
     registration_page.open_page(registered_query=course_name)
-    time.sleep(2)
     # COUNT BEFORE CANCEL
     before_cancel_count = registration_page.get_registered_count()
     # CANCEL COURSE
     registration_page.cancel_course(course_name)
-    time.sleep(2)
     # ASSERT CANCEL SUCCESS
     assert (
         CANCEL_SUCCESS_MESSAGE
@@ -91,41 +77,29 @@ def test_student_cancel_course_removes_timetable_and_grade_page(driver):
             after_cancel_count
             == before_cancel_count - 1
     )
-    driver.get("http://127.0.0.1:5000/timetable")
+    academic_page = StudentAcademicPage(driver)
+    academic_page.open_timetable()
+    assert academic_page.does_not_have_course(course_name)
 
-    time.sleep(2)
-
-    assert (
-        course_name
-        not in driver.page_source
-    )
-
-    driver.get("http://127.0.0.1:5000/grades")
-
-    time.sleep(2)
-
-    assert (
-        course_name
-        not in driver.page_source
-    )
+    academic_page.open_grades()
+    assert academic_page.does_not_have_course(course_name)
 
 def test_student_cannot_register_registered_course(driver):
-    course_name = "Lịch sử Đảng Cộng sản Việt Nam"
-    student_login(driver,"2354050113")
+    scenario = create_registration_scenario(
+        "SEL Duplicate Registration",
+        target_section_count=2,
+    )
+    course_name = scenario.course_name
+    student_login(driver, scenario.student_code)
     registration_page = StudentRegistrationPage(driver)
 
 
     registration_page.open_page(course_query=course_name)
-    time.sleep(2)
     registration_page.register_course(course_name)
-    time.sleep(2)
+    assert REGISTER_SUCCESS_MESSAGE in registration_page.get_message()
 
-    registration_page.open_page( course_query=course_name)
-    time.sleep(2)
-    registration_page.driver.find_element(
-        *registration_page.SECOND_ROW_REGISTER_BUTTON
-    ).click()
-    time.sleep(2)
+    registration_page.open_page(course_query=course_name)
+    registration_page.register_course_from_result(2)
 
     assert (
         ALREADY_REGISTERED_MESSAGE

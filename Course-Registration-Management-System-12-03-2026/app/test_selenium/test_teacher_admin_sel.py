@@ -44,13 +44,7 @@ def test_admin_cannot_delete_teacher_has_classsection(driver):
     time.sleep(2)
 
     # ASSERT DELETE FAILED MESSAGE
-    assert (
-        DELETE_TEACHER_FAILED_MESSAGE
-        in driver.page_source
-    )
+    assert teacher_page.has_message(DELETE_TEACHER_FAILED_MESSAGE)
 
     # ASSERT TEACHER STILL EXISTS
-    assert (
-        teacher_name
-        in driver.page_source
-    )
+    assert teacher_page.has_message(teacher_name)

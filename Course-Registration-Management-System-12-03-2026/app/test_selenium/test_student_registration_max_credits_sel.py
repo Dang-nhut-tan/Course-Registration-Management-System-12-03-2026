@@ -203,7 +203,7 @@ def test_student_register_maximum_25_credits(driver):
         )
     registration_page.open_page()
     time.sleep(2)
-    assert ("25" in registration_page.driver.page_source)
+    assert registration_page.get_registered_credits() == 25
 
 
 def test_student_register_24_credits(driver):
@@ -230,7 +230,7 @@ def test_student_register_24_credits(driver):
         )
     registration_page.open_page()
     time.sleep(2)
-    assert ("24" in registration_page.driver.page_source)
+    assert registration_page.get_registered_credits() == 24
 
 def test_student_register_26_credits(driver):
     courses = [
@@ -274,7 +274,4 @@ def test_student_register_26_credits(driver):
     # ASSERT TOTAL CREDITS STILL 22
     registration_page.open_page()
     time.sleep(2)
-    assert (
-            "22"
-            in registration_page.driver.page_source
-    )
+    assert registration_page.get_registered_credits() == 22

@@ -1,14 +1,10 @@
-import time
-
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
 from app.test_selenium.pages.basePage import BasePage
 
 
 class GradePage(BasePage):
-    URL = "http://127.0.0.1:5000/admin/grade/"
+    PATH = "admin/grade/"
 
     CREATE_BUTTON = (By.XPATH, "//a[contains(@href,'/admin/grade/new')]")
     ENROLLMENT_SELECT2 = (By.ID, "s2id_enrollment")
@@ -18,20 +14,16 @@ class GradePage(BasePage):
     SAVE_BUTTON = (By.CSS_SELECTOR, "input[type='submit']")
 
     def open_list(self):
-        self.open(self.URL)
+        self.open_path(self.PATH)
 
-    def wait_clickable(self, locator, timeout=10):
-        return WebDriverWait(self.driver, timeout).until(
-            EC.element_to_be_clickable(locator)
-        )
+    def wait_clickable(self, locator):
+        return self.wait.until(EC.element_to_be_clickable(locator))
 
-    def wait_visible(self, locator, timeout=10):
-        return WebDriverWait(self.driver, timeout).until(
-            EC.visibility_of_element_located(locator)
-        )
+    def wait_visible(self, locator):
+        return self.wait.until(EC.visibility_of_element_located(locator))
 
     def click_create(self):
-        create_button = self.wait_clickable(self.CREATE_BUTTON, timeout=15)
+        create_button = self.wait_clickable(self.CREATE_BUTTON)
         self.driver.execute_script("arguments[0].click();", create_button)
 
     def select_enrollment(self, student_code):
@@ -40,11 +32,17 @@ class GradePage(BasePage):
         search_input = self.wait_visible(self.SELECT2_INPUT)
         search_input.clear()
         search_input.send_keys(student_code)
-        time.sleep(2)
-
-        self.wait_visible(self.SELECT2_RESULT)
-        search_input.send_keys(Keys.ARROW_DOWN)
-        search_input.send_keys(Keys.ENTER)
+        result = self.wait.until(
+            lambda driver: next(
+                (
+                    item
+                    for item in driver.find_elements(*self.SELECT2_RESULT)
+                    if item.is_displayed() and student_code in item.text
+                ),
+                False,
+            )
+        )
+        result.click()
 
     def input_midterm_score(self, score):
         score_input = self.wait_visible(self.MIDTERM_INPUT)
@@ -57,10 +55,6 @@ class GradePage(BasePage):
 
     def create_midterm_score(self, student_code, score):
         self.click_create()
-        time.sleep(2)
         self.select_enrollment(student_code)
-        time.sleep(1)
         self.input_midterm_score(score)
-        time.sleep(1)
         self.click_save()
-        time.sleep(2)
